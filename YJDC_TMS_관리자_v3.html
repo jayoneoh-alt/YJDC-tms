@@ -327,6 +327,7 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
 .spinner{width:34px;height:34px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=781a3c294cf521fb49a72736283d31d5&libraries=services,clusterer"></script>
 </head>
 <body>
 <div class="layout">
@@ -1393,15 +1394,23 @@ function drawPieChart(regionData){
 // ===== 카카오 지도 =====
 async function initRegionMap(stList){
   const loadingEl=document.getElementById('region-map-loading');
+  if(loadingEl) loadingEl.style.display='flex';
+
+  // 카카오 SDK 로드 대기 (최대 3초)
+  let waited=0;
+  while(typeof kakao==='undefined'&&waited<30){
+    await new Promise(r=>setTimeout(r,100));
+    waited++;
+  }
   if(typeof kakao==='undefined'){
-    if(loadingEl) loadingEl.innerHTML='<span style="font-size:12px;color:var(--text3)">카카오 지도는 HTTPS 환경에서 사용 가능합니다</span>';
+    if(loadingEl) loadingEl.innerHTML='<span style="font-size:12px;color:var(--text3)">⚠️ 카카오 지도 로드 실패 — 페이지를 새로고침해주세요</span>';
     return;
   }
 
   const container=document.getElementById('region-map');
   if(!container)return;
 
-  // 지도 초기화
+  // 지도 초기화 (이미 있으면 재활용)
   if(!regionMap){
     regionMap=new kakao.maps.Map(container,{
       center:new kakao.maps.LatLng(37.4,127.1),
