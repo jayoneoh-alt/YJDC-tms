@@ -318,6 +318,14 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
 .outlier-warn{background:rgba(251,191,36,0.15);color:var(--amber)}
 .outlier-good{background:rgba(52,211,153,0.15);color:var(--green)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+.dash-tab{flex:1;padding:10px 6px;font-size:12px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--text2);font-family:var(--font);transition:all 0.15s;border-right:1px solid var(--border)}
+.dash-tab:last-child{border-right:none}
+.dash-tab:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.dash-tab.active-tab{background:var(--accent);color:#fff;font-weight:600}
+
+.spinner{width:34px;height:34px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -325,24 +333,24 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
   <div class="sidebar">
     <div class="logo"><div class="logo-title">YJDC TMS</div><div class="logo-sub">v3.0 · Admin</div></div>
     <nav class="nav">
-      <div class="nav-item" onclick="showPage('dashboard')">
+      <div class="nav-item" data-page="dashboard" onclick="showPage('dashboard')">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="8" height="9" rx="1" stroke-width="2"/><rect x="14" y="3" width="8" height="5" rx="1" stroke-width="2"/><rect x="14" y="12" width="8" height="9" rx="1" stroke-width="2"/><rect x="2" y="16" width="8" height="5" rx="1" stroke-width="2"/></svg>
         대시보드
       </div>
       <div style="height:1px;background:var(--border);margin:6px 12px"></div>
-      <div class="nav-item active" onclick="showPage('orders')">
+      <div class="nav-item active" data-page="orders"    onclick="showPage('orders')">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/></svg>
         오더 현황
       </div>
-      <div class="nav-item" onclick="showPage('drivers')">
+      <div class="nav-item" data-page="drivers"   onclick="showPage('drivers')">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke-width="2"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke-width="2" stroke-linecap="round"/></svg>
         기사 관리
       </div>
-      <div class="nav-item" onclick="showPage('shipto')">
+      <div class="nav-item" data-page="shipto"    onclick="showPage('shipto')">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2"/><polyline points="9 22 9 12 15 12 15 22" stroke-width="2"/></svg>
         업체 특이사항
       </div>
-      <div class="nav-item" onclick="showPage('returns')">
+      <div class="nav-item" data-page="returns"   onclick="showPage('returns')">
         <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10" stroke-width="2"/><path d="M3.51 15a9 9 0 1 0 .49-4" stroke-width="2" stroke-linecap="round"/></svg>
         반품 관리
       </div>
@@ -397,10 +405,13 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
           </div>
         </div>
 
-        <!-- 탭: 현황 / 분석 -->
+        <!-- 탭 -->
         <div style="display:flex;gap:0;margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
-          <button id="dash-tab-status" onclick="switchDashTab('status')" style="flex:1;padding:10px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:var(--font)">🚚 실시간 현황</button>
-          <button id="dash-tab-analysis" onclick="switchDashTab('analysis')" style="flex:1;padding:10px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--text2);font-family:var(--font)">📈 성과 분석</button>
+          <button id="dash-tab-status"   onclick="switchDashTab('status')"   class="dash-tab active-tab">🚚 현황</button>
+          <button id="dash-tab-analysis" onclick="switchDashTab('analysis')" class="dash-tab">📈 성과</button>
+          <button id="dash-tab-cost"     onclick="switchDashTab('cost')"     class="dash-tab">💰 비용</button>
+          <button id="dash-tab-kpi"      onclick="switchDashTab('kpi')"      class="dash-tab">📊 KPI</button>
+          <button id="dash-tab-region"   onclick="switchDashTab('region')"   class="dash-tab">🗺 지역</button>
         </div>
 
         <!-- ===== 탭1: 실시간 현황 ===== -->
@@ -493,9 +504,159 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
           </div>
         </div>
 
+        <!-- ===== 탭3: 비용 분석 ===== -->
+        <div id="dash-panel-cost" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <div style="font-size:13px;font-weight:600;color:var(--text)">월별 주유비 누적 현황</div>
+            <select id="cost-year" onchange="loadCostTab()" class="drv-input" style="padding:5px 10px;font-size:12px;width:auto">
+            </select>
+            <div style="margin-left:auto;font-size:11px;color:var(--text3)">연비·유류단가는 기사 관리에서 설정</div>
+          </div>
+          <!-- 월별 요약 카드 -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px" id="cost-month-cards"></div>
+          <!-- 기사별 월 누적 바 -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:12px">기사별 주유비 비교 <span id="cost-period-label" style="font-weight:400;color:var(--text3)"></span></div>
+            <div id="cost-driver-bars" style="display:flex;flex-direction:column;gap:10px"></div>
+          </div>
+          <!-- 월별 트렌드 테이블 -->
+          <div class="table-wrap">
+            <table id="cost-table">
+              <thead><tr>
+                <th>기사</th>
+                <th id="cost-th-1" style="text-align:center">1월</th>
+                <th id="cost-th-2" style="text-align:center">2월</th>
+                <th id="cost-th-3" style="text-align:center">3월</th>
+                <th id="cost-th-4" style="text-align:center">4월</th>
+                <th id="cost-th-5" style="text-align:center">5월</th>
+                <th id="cost-th-6" style="text-align:center">6월</th>
+                <th id="cost-th-7" style="text-align:center">7월</th>
+                <th id="cost-th-8" style="text-align:center">8월</th>
+                <th id="cost-th-9" style="text-align:center">9월</th>
+                <th id="cost-th-10" style="text-align:center">10월</th>
+                <th id="cost-th-11" style="text-align:center">11월</th>
+                <th id="cost-th-12" style="text-align:center">12월</th>
+                <th style="text-align:center;color:var(--accent)">연간합계</th>
+              </tr></thead>
+              <tbody id="cost-tbody"><tr><td colspan="14" style="text-align:center;padding:30px;color:var(--text3)">조회 중...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ===== 탭4: 운영 KPI ===== -->
+        <div id="dash-panel-kpi" style="display:none">
+          <!-- KPI 요약 카드 -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px" id="kpi-summary-cards">
+            <div class="dash-sum-card" style="border-top:3px solid var(--green)">
+              <div class="dash-sum-label">평균 완료율</div>
+              <div class="dash-sum-val" id="kpi-avg-done" style="color:var(--green)">—</div>
+              <div class="dash-sum-label" style="margin-top:4px">최근 30일</div>
+            </div>
+            <div class="dash-sum-card" style="border-top:3px solid var(--accent)">
+              <div class="dash-sum-label">일평균 배송지/기사</div>
+              <div class="dash-sum-val" id="kpi-avg-stops" style="color:var(--accent)">—</div>
+              <div class="dash-sum-label" style="margin-top:4px">최근 30일</div>
+            </div>
+            <div class="dash-sum-card" style="border-top:3px solid var(--amber)">
+              <div class="dash-sum-label">평균 이슈율</div>
+              <div class="dash-sum-val" id="kpi-avg-issue" style="color:var(--amber)">—</div>
+              <div class="dash-sum-label" style="margin-top:4px">최근 30일</div>
+            </div>
+            <div class="dash-sum-card" style="border-top:3px solid #a78bfa">
+              <div class="dash-sum-label">총 배송 거리</div>
+              <div class="dash-sum-val" id="kpi-total-km" style="color:#a78bfa">—</div>
+              <div class="dash-sum-label" style="margin-top:4px">최근 30일 (km)</div>
+            </div>
+          </div>
+          <!-- 주별 트렌드 -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:12px">📅 주별 완료율 트렌드</div>
+            <div id="kpi-weekly-bars" style="display:flex;gap:6px;align-items:flex-end;height:120px;padding-bottom:20px;position:relative"></div>
+          </div>
+          <!-- 기사별 KPI 테이블 -->
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>기사</th>
+                <th style="text-align:center">총 배송일</th>
+                <th style="text-align:center">총 배송지</th>
+                <th style="text-align:center">일평균</th>
+                <th style="text-align:center">완료율</th>
+                <th style="text-align:center">이슈율</th>
+                <th style="text-align:center">총 거리(km)</th>
+                <th style="text-align:center">총 주유비</th>
+                <th style="text-align:center">km당 단가</th>
+              </tr></thead>
+              <tbody id="kpi-tbody"><tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3)">조회 후 표시됩니다</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ===== 탭5: 지역 분석 ===== -->
+        <div id="dash-panel-region" style="display:none">
+
+          <!-- 기간 선택 -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12px;flex-wrap:wrap">
+            <span style="color:var(--text3);font-weight:600">기간</span>
+            <button class="sort-btn active" onclick="setRegionPeriod(7,this)">1주</button>
+            <button class="sort-btn" onclick="setRegionPeriod(30,this)">1개월</button>
+            <button class="sort-btn" onclick="setRegionPeriod(90,this)">3개월</button>
+            <span style="color:var(--text3);margin-left:8px" id="region-period-label"></span>
+          </div>
+
+          <!-- 지도 + 파이차트 나란히 -->
+          <div style="display:grid;grid-template-columns:1fr 340px;gap:12px;margin-bottom:14px;min-height:400px">
+
+            <!-- 왼쪽: 카카오 지도 -->
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative">
+              <div style="padding:10px 14px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+                🗺 배송지 분포 지도
+                <span style="font-size:10px;color:var(--text3);font-weight:400">• 마커 크기 = 배송 빈도</span>
+              </div>
+              <div id="region-map" style="width:100%;height:360px;background:var(--bg3)"></div>
+              <div id="region-map-loading" style="position:absolute;inset:40px 0 0 0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px;color:var(--text3);font-size:12px">
+                <div class="spinner" style="width:24px;height:24px;border-width:2px"></div>
+                지도 로딩 중...
+              </div>
+            </div>
+
+            <!-- 오른쪽: 파이차트 -->
+            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column">
+              <div style="padding:10px 14px;font-size:12px;font-weight:600;border-bottom:1px solid var(--border)">
+                📊 권역별 배송 비율
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;gap:12px">
+                <svg id="region-pie" width="200" height="200" viewBox="0 0 200 200"></svg>
+                <div id="region-legend" style="width:100%;display:flex;flex-direction:column;gap:5px;font-size:11px"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 기사별 배송지 바 -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+            <div style="font-size:12px;font-weight:600;margin-bottom:12px">기사별 담당 배송지 수</div>
+            <div id="region-driver-bars" style="display:flex;flex-direction:column;gap:8px"></div>
+          </div>
+
+          <!-- 다빈도 배송지 TOP -->
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th style="width:36px">순위</th>
+                <th>배송지</th>
+                <th>업체명</th>
+                <th style="text-align:center">횟수</th>
+                <th style="text-align:center">총수량</th>
+                <th>주담당</th>
+              </tr></thead>
+              <tbody id="region-top-tbody"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text3)">조회 후 표시됩니다</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
       </div>
 
-      <div id="page-orders">
+      <div id="page-orders" style="display:none">
 
         <!-- 날짜 헤더 -->
         <div class="date-header">
@@ -833,6 +994,538 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
 <div class="toast-wrap" id="toast-wrap"></div>
 
 <script>
+// ===== 💰 비용 분석 탭 =====
+let costData=null;
+
+async function loadCostTab(){
+  const yearSel=document.getElementById('cost-year');
+  const year=yearSel?.value||new Date().getFullYear();
+
+  // 연도 선택 옵션 초기화
+  if(yearSel&&!yearSel.options.length){
+    const curY=new Date().getFullYear();
+    for(let y=curY;y>=curY-2;y--){
+      const opt=document.createElement('option');
+      opt.value=y;opt.textContent=y+'년';
+      yearSel.appendChild(opt);
+    }
+  }
+
+  try{
+    // 해당 연도 routes 데이터 조회
+    const routes=await sb('GET',
+      `delivery_routes?delivery_date=gte.${year}-01-01&delivery_date=lte.${year}-12-31&select=driver_name,delivery_date,total_km_cumulative&order=driver_name,delivery_date`).catch(()=>[]);
+    const drivers=await sb('GET','drivers?select=name,fuel_efficiency,fuel_price_per_liter').catch(()=>[]);
+
+    const drvInfo={};
+    (drivers||[]).forEach(d=>drvInfo[d.name]={eff:d.fuel_efficiency||10,price:d.fuel_price_per_liter||1650});
+
+    // 기사+날짜별 최대 km
+    const dayKm={};
+    (routes||[]).forEach(r=>{
+      const k=r.driver_name+'|'+r.delivery_date;
+      if(!dayKm[k]||r.total_km_cumulative>dayKm[k]) dayKm[k]=r.total_km_cumulative||0;
+    });
+
+    // 기사+월별 집계
+    const drvMonthCost={};// {driver: {1:cost, 2:cost,...}}
+    const monthTotal={};  // {1:cost, 2:cost,...}
+    for(let m=1;m<=12;m++){monthTotal[m]=0;}
+
+    Object.entries(dayKm).forEach(([key,km])=>{
+      const [drv,date]=key.split('|');
+      const month=parseInt(date.slice(5,7));
+      const info=drvInfo[drv]||{eff:10,price:1650};
+      const cost=Math.round(km/info.eff*info.price);
+      if(!drvMonthCost[drv]) drvMonthCost[drv]={total:0};
+      drvMonthCost[drv][month]=(drvMonthCost[drv][month]||0)+cost;
+      drvMonthCost[drv].total=(drvMonthCost[drv].total||0)+cost;
+      monthTotal[month]=(monthTotal[month]||0)+cost;
+    });
+
+    costData={drvMonthCost,monthTotal,year};
+    renderCostTab(costData);
+  }catch(e){console.error('비용 탭 오류',e);}
+}
+
+function renderCostTab({drvMonthCost,monthTotal,year}){
+  // 월별 요약 카드 (현재 월까지)
+  const curMonth=new Date().getFullYear()==year?new Date().getMonth()+1:12;
+  const cards=document.getElementById('cost-month-cards');
+  if(cards){
+    const months=[1,2,3,4];// 최근 4개월
+    const recentMonths=[];
+    for(let i=0;i<4;i++){
+      const m=curMonth-i;
+      if(m>0) recentMonths.unshift(m);
+    }
+    cards.innerHTML=recentMonths.map(m=>`
+      <div class="dash-sum-card" style="border-top:3px solid var(--accent)">
+        <div class="dash-sum-label">${m}월 총 주유비</div>
+        <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--accent)">
+          ${Math.round((monthTotal[m]||0)/10000)}만원
+        </div>
+        <div class="dash-sum-label" style="margin-top:4px">${(monthTotal[m]||0).toLocaleString()}원</div>
+      </div>`).join('');
+  }
+
+  // 기사별 연간 바
+  const drivers=Object.keys(drvMonthCost).sort((a,b)=>(drvMonthCost[b].total||0)-(drvMonthCost[a].total||0));
+  const maxCost=Math.max(...drivers.map(d=>drvMonthCost[d].total||0),1);
+  const barsEl=document.getElementById('cost-driver-bars');
+  if(barsEl){
+    const periodLabel=document.getElementById('cost-period-label');
+    if(periodLabel) periodLabel.textContent=`(${year}년 연간 누적)`;
+    barsEl.innerHTML=drivers.map((drv,i)=>{
+      const total=drvMonthCost[drv].total||0;
+      const pct=Math.round(total/maxCost*100);
+      const color=drvColor(drv);
+      return`<div style="display:flex;align-items:center;gap:10px;font-size:12px">
+        <span style="min-width:70px;font-weight:500;color:var(--text)">${drv}</span>
+        <div style="flex:1;height:20px;background:var(--bg3);border-radius:4px;overflow:hidden;position:relative">
+          <div style="height:100%;width:${pct}%;background:${color};opacity:0.8;border-radius:4px;transition:width 0.5s"></div>
+          <span style="position:absolute;left:8px;top:2px;font-size:11px;font-family:var(--mono);color:${pct>30?'#fff':color}">${Math.round(total/10000)}만원</span>
+        </div>
+        <span style="min-width:80px;text-align:right;font-family:var(--mono);color:var(--text2);font-size:11px">${total.toLocaleString()}원</span>
+      </div>`;
+    }).join('');
+  }
+
+  // 월별 테이블
+  const tbody=document.getElementById('cost-tbody');
+  if(!tbody) return;
+  // 연간 합계 행 먼저
+  const grandTotal=Object.values(monthTotal).reduce((s,v)=>s+v,0);
+  tbody.innerHTML=drivers.map(drv=>{
+    const d=drvMonthCost[drv];
+    const yearTotal=d.total||0;
+    const cells=Array.from({length:12},(_,i)=>{
+      const m=i+1;
+      const v=d[m]||0;
+      const avg=monthTotal[m]?d[m]/(monthTotal[m]/drivers.length):0;
+      const color=avg>1.3?'var(--red)':avg>1?'var(--amber)':'var(--text)';
+      return`<td style="text-align:center;font-family:var(--mono);font-size:11px;color:${v?color:'var(--text3)'}">${v?Math.round(v/1000)+'k':'—'}</td>`;
+    }).join('');
+    return`<tr>
+      <td><span style="display:flex;align-items:center;gap:6px">
+        <span style="width:8px;height:8px;border-radius:50%;background:${drvColor(drv)}"></span>
+        <b>${drv}</b>
+      </span></td>
+      ${cells}
+      <td style="text-align:center;font-family:var(--mono);font-weight:600;color:var(--accent)">${Math.round(yearTotal/10000)}만원</td>
+    </tr>`;
+  }).join('');
+
+  // 합계 행 추가
+  const totalRow=`<tr style="background:rgba(79,142,247,0.06);font-weight:600">
+    <td>📊 월 합계</td>
+    ${Array.from({length:12},(_,i)=>`<td style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--accent)">${monthTotal[i+1]?Math.round(monthTotal[i+1]/1000)+'k':'—'}</td>`).join('')}
+    <td style="text-align:center;font-family:var(--mono);color:var(--accent)">${Math.round(grandTotal/10000)}만원</td>
+  </tr>`;
+  tbody.innerHTML+=totalRow;
+}
+
+// ===== 📊 운영 KPI 탭 =====
+async function loadKpiTab(){
+  try{
+    const to=new Date().toISOString().slice(0,10);
+    const from=new Date(Date.now()-30*86400000).toISOString().slice(0,10);
+
+    const [orders,routes]=await Promise.all([
+      sb('GET',`orders?delivery_date=gte.${from}&delivery_date=lte.${to}&select=ship_to_code,ship_to_name,driver_name,status,delivery_date&limit=5000`).catch(()=>[]),
+      sb('GET',`delivery_routes?delivery_date=gte.${from}&delivery_date=lte.${to}&select=driver_name,delivery_date,total_km_cumulative&order=driver_name,delivery_date`).catch(()=>[])
+    ]);
+    const drivers=await sb('GET','drivers?select=name,fuel_efficiency,fuel_price_per_liter').catch(()=>[]);
+    const drvInfo={};(drivers||[]).forEach(d=>drvInfo[d.name]={eff:d.fuel_efficiency||10,price:d.fuel_price_per_liter||1650});
+
+    // ST코드 그룹
+    const stMap={};
+    (orders||[]).forEach(o=>{
+      const k=o.delivery_date+'|'+(o.driver_name||'?')+'|'+(o.ship_to_code||o.ship_to_name||o.id);
+      if(!stMap[k])stMap[k]={driver:o.driver_name,date:o.delivery_date,status:o.status};
+      const sp=['이슈','완료','배송중','픽업','배차완료','접수대기'];
+      if(sp.indexOf(o.status)<sp.indexOf(stMap[k].status))stMap[k].status=o.status;
+    });
+    const groups=Object.values(stMap);
+
+    // KPI 계산
+    const done=groups.filter(g=>g.status==='완료').length;
+    const issue=groups.filter(g=>g.status==='이슈').length;
+    const total=groups.length;
+    const doneRate=total?Math.round(done/total*100):0;
+    const issueRate=total?Math.round(issue/total*100):0;
+
+    // 날짜별 기사 수
+    const dateDrvMap={};
+    groups.forEach(g=>{
+      if(!dateDrvMap[g.date])dateDrvMap[g.date]=new Set();
+      if(g.driver)dateDrvMap[g.date].add(g.driver);
+    });
+    const days=Object.keys(dateDrvMap).length||1;
+    const avgDrvPerDay=Math.round(Object.values(dateDrvMap).reduce((s,v)=>s+v.size,0)/days*10)/10;
+    const avgStopsPerDrvDay=Math.round(total/(days*avgDrvPerDay||1)*10)/10;
+
+    // 총 km
+    const routeKmMap={};
+    (routes||[]).forEach(r=>{const k=r.driver_name+'|'+r.delivery_date;if(!routeKmMap[k]||r.total_km_cumulative>routeKmMap[k])routeKmMap[k]=r.total_km_cumulative||0;});
+    const totalKm=Math.round(Object.values(routeKmMap).reduce((s,v)=>s+v,0));
+
+    document.getElementById('kpi-avg-done').textContent=doneRate+'%';
+    document.getElementById('kpi-avg-stops').textContent=avgStopsPerDrvDay+'곳';
+    document.getElementById('kpi-avg-issue').textContent=issueRate+'%';
+    document.getElementById('kpi-total-km').textContent=totalKm.toLocaleString();
+
+    // 주별 트렌드 바
+    const weekMap={};
+    groups.forEach(g=>{
+      const d=new Date(g.date);
+      const week=getWeekLabel(d);
+      if(!weekMap[week])weekMap[week]={total:0,done:0};
+      weekMap[week].total++;
+      if(g.status==='완료')weekMap[week].done++;
+    });
+    const weeks=Object.keys(weekMap).sort().slice(-8);
+    const maxWeekTotal=Math.max(...weeks.map(w=>weekMap[w].total),1);
+    const barsEl=document.getElementById('kpi-weekly-bars');
+    if(barsEl){
+      barsEl.innerHTML=weeks.map(w=>{
+        const wData=weekMap[w];
+        const pct=Math.round(wData.total/maxWeekTotal*100);
+        const donePct=wData.total?Math.round(wData.done/wData.total*100):0;
+        const barColor=donePct>=80?'var(--green)':donePct>=50?'var(--amber)':'var(--red)';
+        return`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+          <div style="font-size:10px;color:var(--text3);font-family:var(--mono)">${donePct}%</div>
+          <div style="width:100%;background:var(--bg3);border-radius:4px 4px 0 0;position:relative;flex:1;min-height:10px">
+            <div style="position:absolute;bottom:0;left:0;right:0;height:${pct}%;background:${barColor};border-radius:4px 4px 0 0;opacity:0.8"></div>
+          </div>
+          <div style="font-size:9px;color:var(--text3);text-align:center;white-space:nowrap">${w.slice(5)}</div>
+        </div>`;
+      }).join('');
+    }
+
+    // 기사별 KPI 테이블
+    const drvKpi={};
+    groups.forEach(g=>{
+      if(!g.driver||g.driver==='미배차')return;
+      if(!drvKpi[g.driver])drvKpi[g.driver]={stops:0,done:0,issue:0,days:new Set(),km:0,cost:0};
+      const d=drvKpi[g.driver];
+      d.stops++;d.days.add(g.date);
+      if(g.status==='완료')d.done++;
+      if(g.status==='이슈')d.issue++;
+    });
+    Object.keys(drvKpi).forEach(drv=>{
+      const d=drvKpi[drv];
+      const info=drvInfo[drv]||{eff:10,price:1650};
+      d.km=0;d.days.forEach(date=>{d.km+=(routeKmMap[drv+'|'+date]||0);});
+      d.cost=Math.round(d.km/info.eff*info.price);
+      d.doneRate=d.stops?Math.round(d.done/d.stops*100):0;
+      d.issueRate=d.stops?Math.round(d.issue/d.stops*100):0;
+      d.kmPerCost=d.km>0?Math.round(d.cost/d.km):0;
+      d.days=d.days.size;
+    });
+    const kpiList=Object.values(drvKpi).sort((a,b)=>b.stops-a.stops);
+    const tbody=document.getElementById('kpi-tbody');
+    if(tbody){
+      tbody.innerHTML=kpiList.map(d=>`<tr>
+        <td><span style="display:flex;align-items:center;gap:6px">
+          <span style="width:8px;height:8px;border-radius:50%;background:${drvColor(d.name||'')}"></span>
+          <b>${d.name||''}</b>
+        </span></td>
+        <td style="text-align:center;font-family:var(--mono)">${d.days}</td>
+        <td style="text-align:center;font-family:var(--mono)">${d.stops}</td>
+        <td style="text-align:center;font-family:var(--mono)">${d.days?Math.round(d.stops/d.days*10)/10:'—'}</td>
+        <td style="text-align:center"><span style="color:${d.doneRate>=80?'var(--green)':d.doneRate>=50?'var(--amber)':'var(--red)'}">${d.doneRate}%</span></td>
+        <td style="text-align:center"><span style="color:${d.issueRate>=20?'var(--red)':d.issueRate>=10?'var(--amber)':'var(--green)'}">${d.issueRate}%</span></td>
+        <td style="text-align:center;font-family:var(--mono)">${Math.round(d.km).toLocaleString()}</td>
+        <td style="text-align:center;font-family:var(--mono);color:var(--accent)">${Math.round(d.cost/10000)}만원</td>
+        <td style="text-align:center;font-family:var(--mono);font-size:11px;color:var(--text3)">${d.kmPerCost?d.kmPerCost+'원/km':'—'}</td>
+      </tr>`).join('');
+    }
+  }catch(e){console.error('KPI 탭 오류',e);}
+}
+
+function getWeekLabel(d){
+  const start=new Date(d);
+  start.setDate(d.getDate()-d.getDay()+1);
+  return start.toISOString().slice(0,10);
+}
+
+// ===== 🗺 지역 분석 탭 =====
+let regionMap=null;
+let regionPeriodDays=7;
+let regionMarkers=[];
+
+function setRegionPeriod(days, el){
+  regionPeriodDays=days;
+  document.querySelectorAll('#dash-panel-region .sort-btn').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  loadRegionTab();
+}
+
+async function loadRegionTab(){
+  const to=new Date().toISOString().slice(0,10);
+  const from=new Date(Date.now()-regionPeriodDays*86400000).toISOString().slice(0,10);
+  const label=document.getElementById('region-period-label');
+  if(label) label.textContent=`${from} ~ ${to}`;
+
+  try{
+    const [orders, drvRegions] = await Promise.all([
+      sb('GET',`orders?delivery_date=gte.${from}&delivery_date=lte.${to}&select=ship_to_code,ship_to_name,driver_name,qty,address&limit=5000`).catch(()=>[]),
+      sb('GET','drivers?select=name,region').catch(()=>[])
+    ]);
+
+    // ST코드별 집계
+    const stMap={};
+    (orders||[]).forEach(o=>{
+      const k=o.ship_to_code||(o.ship_to_name||'?');
+      if(!stMap[k])stMap[k]={
+        stCode:o.ship_to_code||'',
+        name:(o.ship_to_name||'').replace(/-725|-WB-725/g,'').trim(),
+        address:o.address||'',
+        drivers:{},count:0,qty:0,lat:null,lng:null
+      };
+      stMap[k].count++;
+      stMap[k].qty+=(parseInt(o.qty)||0);
+      if(o.driver_name) stMap[k].drivers[o.driver_name]=(stMap[k].drivers[o.driver_name]||0)+1;
+    });
+    const stList=Object.values(stMap).sort((a,b)=>b.count-a.count);
+
+    // 기사별 권역 매핑
+    const drvRegionMap={};
+    (drvRegions||[]).forEach(d=>{if(d.region)drvRegionMap[d.name]=d.region;});
+
+    // 권역별 집계 (기사의 region 기준)
+    const regionData={};
+    (orders||[]).forEach(o=>{
+      if(!o.driver_name)return;
+      const reg=drvRegionMap[o.driver_name]||'기타';
+      reg.split('/').forEach(r=>{
+        const rr=r.trim()||'기타';
+        if(!regionData[rr])regionData[rr]={count:0,drivers:new Set()};
+        regionData[rr].count++;
+        regionData[rr].drivers.add(o.driver_name);
+      });
+    });
+
+    // 파이차트 그리기
+    drawPieChart(regionData);
+
+    // 카카오 지도
+    initRegionMap(stList);
+
+    // 기사별 바
+    renderRegionDriverBars(orders||[]);
+
+    // TOP 배송지 테이블
+    renderRegionTopTable(stList);
+
+  }catch(e){console.error('지역 탭 오류',e);}
+}
+
+// ===== SVG 파이차트 =====
+function drawPieChart(regionData){
+  const svg=document.getElementById('region-pie');
+  const legend=document.getElementById('region-legend');
+  if(!svg||!legend)return;
+
+  const entries=Object.entries(regionData).sort((a,b)=>b[1].count-a[1].count).slice(0,8);
+  const total=entries.reduce((s,[,v])=>s+v.count,0)||1;
+
+  const PIE_COLORS=['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c','#e879f9'];
+  const cx=100,cy=100,r=85,ri=40; // 도넛형
+
+  let startAngle=-Math.PI/2;
+  let paths='';
+
+  entries.forEach(([name,data],i)=>{
+    const pct=data.count/total;
+    const angle=pct*2*Math.PI;
+    const endAngle=startAngle+angle;
+    const largeArc=angle>Math.PI?1:0;
+    const color=PIE_COLORS[i%PIE_COLORS.length];
+
+    // 외호 좌표
+    const x1=cx+r*Math.cos(startAngle), y1=cy+r*Math.sin(startAngle);
+    const x2=cx+r*Math.cos(endAngle),   y2=cy+r*Math.sin(endAngle);
+    // 내호 좌표 (도넛)
+    const ix1=cx+ri*Math.cos(endAngle),  iy1=cy+ri*Math.sin(endAngle);
+    const ix2=cx+ri*Math.cos(startAngle),iy2=cy+ri*Math.sin(startAngle);
+
+    // 라벨 위치 (중간각도)
+    const mid=startAngle+angle/2;
+    const lx=cx+(r+ri)/2*Math.cos(mid);
+    const ly=cy+(r+ri)/2*Math.sin(mid);
+
+    const path=`M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${ix1} ${iy1} A ${ri} ${ri} 0 ${largeArc} 0 ${ix2} ${iy2} Z`;
+
+    paths+=`<path d="${path}" fill="${color}" stroke="var(--bg2)" stroke-width="2" opacity="0.9">
+      <title>${name}: ${data.count}회 (${Math.round(pct*100)}%)</title>
+    </path>`;
+
+    // 5% 이상이면 퍼센트 표시
+    if(pct>=0.05){
+      paths+=`<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="600" fill="#fff">${Math.round(pct*100)}%</text>`;
+    }
+
+    startAngle=endAngle;
+  });
+
+  // 중앙 텍스트
+  paths+=`<text x="100" y="96" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text)">${total}</text>
+  <text x="100" y="110" text-anchor="middle" font-size="9" fill="var(--text3)">총 배송</text>`;
+
+  svg.innerHTML=paths;
+
+  // 범례
+  legend.innerHTML=entries.map(([name,data],i)=>{
+    const pct=Math.round(data.count/total*100);
+    const color=PIE_COLORS[i%PIE_COLORS.length];
+    return`<div style="display:flex;align-items:center;gap:7px">
+      <span style="width:10px;height:10px;border-radius:2px;background:${color};flex-shrink:0"></span>
+      <span style="flex:1;color:var(--text2)">${name}</span>
+      <span style="font-family:var(--mono);color:var(--text);font-weight:600">${data.count}회</span>
+      <span style="font-family:var(--mono);color:var(--text3);min-width:30px;text-align:right">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+// ===== 카카오 지도 =====
+async function initRegionMap(stList){
+  const loadingEl=document.getElementById('region-map-loading');
+  if(typeof kakao==='undefined'){
+    if(loadingEl) loadingEl.innerHTML='<span style="font-size:12px;color:var(--text3)">카카오 지도는 HTTPS 환경에서 사용 가능합니다</span>';
+    return;
+  }
+
+  const container=document.getElementById('region-map');
+  if(!container)return;
+
+  // 지도 초기화
+  if(!regionMap){
+    regionMap=new kakao.maps.Map(container,{
+      center:new kakao.maps.LatLng(37.4,127.1),
+      level:10
+    });
+  }
+
+  // 기존 마커 제거
+  regionMarkers.forEach(m=>m.setMap(null));
+  regionMarkers=[];
+
+  // 좌표 있는 배송지 지오코딩 (상위 30개만)
+  const geocoder=new kakao.maps.services.Geocoder();
+  const top30=stList.slice(0,30);
+  const maxCount=top30[0]?.count||1;
+
+  const PIE_COLORS=['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c','#e879f9'];
+
+  let processed=0;
+  const bounds=new kakao.maps.LatLngBounds();
+
+  for(const st of top30){
+    if(!st.address)continue;
+    await new Promise(resolve=>{
+      const clean=st.address.replace(/\(.*?\)/g,'').trim().substring(0,50);
+      geocoder.addressSearch(clean,(res,status)=>{
+        if(status===kakao.maps.services.Status.OK&&res.length){
+          const lat=parseFloat(res[0].y), lng=parseFloat(res[0].x);
+          st.lat=lat; st.lng=lng;
+
+          // 마커 크기 = 배송 빈도
+          const sz=Math.max(20, Math.min(50, Math.round(20+st.count/maxCount*30)));
+          const mainDrv=Object.entries(st.drivers).sort((a,b)=>b[1]-a[1])[0];
+          const color=mainDrv?drvColor(mainDrv[0]):'#4f8ef7';
+
+          // 커스텀 마커 (원형)
+          const markerImg=new kakao.maps.MarkerImage(
+            `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+              `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}">
+                <circle cx="${sz/2}" cy="${sz/2}" r="${sz/2-2}" fill="${color}" opacity="0.85" stroke="white" stroke-width="2"/>
+                <text x="${sz/2}" y="${sz/2+4}" text-anchor="middle" font-size="${Math.max(8,sz/4)}" font-weight="bold" fill="white">${st.count}</text>
+              </svg>`
+            )}`,
+            new kakao.maps.Size(sz,sz),
+            {offset:new kakao.maps.Point(sz/2,sz/2)}
+          );
+
+          const marker=new kakao.maps.Marker({
+            position:new kakao.maps.LatLng(lat,lng),
+            map:regionMap,
+            image:markerImg,
+            title:st.name
+          });
+
+          // 인포윈도우
+          const iw=new kakao.maps.InfoWindow({
+            content:`<div style="padding:8px 12px;font-size:12px;min-width:140px;font-family:sans-serif">
+              <b>${st.name}</b><br>
+              <span style="color:#888">ST: ${st.stCode||'—'}</span><br>
+              배송 <b>${st.count}회</b> · 수량 ${st.qty}<br>
+              ${mainDrv?`담당: <b>${mainDrv[0]}</b>`:''}
+            </div>`,
+            removable:true
+          });
+          kakao.maps.event.addListener(marker,'click',()=>iw.open(regionMap,marker));
+
+          regionMarkers.push(marker);
+          bounds.extend(new kakao.maps.LatLng(lat,lng));
+          processed++;
+        }
+        resolve();
+      });
+    });
+    await new Promise(r=>setTimeout(r,60));
+  }
+
+  if(processed>0) regionMap.setBounds(bounds);
+  if(loadingEl) loadingEl.style.display='none';
+}
+
+function renderRegionDriverBars(orders){
+  const drvStops={};
+  orders.forEach(o=>{
+    if(!o.driver_name)return;
+    if(!drvStops[o.driver_name])drvStops[o.driver_name]=new Set();
+    drvStops[o.driver_name].add(o.ship_to_code||(o.ship_to_name||'?'));
+  });
+  const drvList=Object.keys(drvStops).sort();
+  const maxCnt=Math.max(...Object.values(drvStops).map(s=>s.size),1);
+  const el=document.getElementById('region-driver-bars');
+  if(!el)return;
+  el.innerHTML=drvList.map(drv=>{
+    const cnt=drvStops[drv].size;
+    const pct=Math.round(cnt/maxCnt*100);
+    return`<div style="display:flex;align-items:center;gap:10px;font-size:12px">
+      <span style="min-width:70px;font-weight:500;color:var(--text)">${drv}</span>
+      <div style="flex:1;height:18px;background:var(--bg3);border-radius:4px;overflow:hidden;position:relative">
+        <div style="height:100%;width:${pct}%;background:${drvColor(drv)};opacity:0.75;border-radius:4px;transition:width 0.5s"></div>
+        <span style="position:absolute;left:8px;top:1px;font-size:10px;font-family:var(--mono);color:${pct>25?'#fff':'var(--text)'}">${cnt}곳</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRegionTopTable(stList){
+  const tbody=document.getElementById('region-top-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=stList.slice(0,20).map((s,i)=>{
+    const mainDrv=Object.entries(s.drivers).sort((a,b)=>b[1]-a[1])[0];
+    const medal=i<3?['🥇','🥈','🥉'][i]:i+1;
+    return`<tr>
+      <td style="text-align:center">${medal}</td>
+      <td class="td-mono">${s.stCode||'—'}</td>
+      <td class="td-main">${s.name.substring(0,18)}</td>
+      <td style="text-align:center;font-family:var(--mono);font-weight:600;color:var(--accent)">${s.count}회</td>
+      <td style="text-align:center;font-family:var(--mono)">${s.qty.toLocaleString()}</td>
+      <td>${mainDrv?`<span style="display:flex;align-items:center;gap:5px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${drvColor(mainDrv[0])}"></span>
+        ${mainDrv[0]}
+      </span>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
 // ===== 실시간 위치 로드 =====
 async function loadDriverLocations(today){
   try{
@@ -884,15 +1577,17 @@ function setDashDate(range){
 
 function switchDashTab(tab){
   curDashTab=tab;
-  document.getElementById('dash-panel-status').style.display=tab==='status'?'block':'none';
-  document.getElementById('dash-panel-analysis').style.display=tab==='analysis'?'block':'none';
-  document.getElementById('dash-tab-status').style.cssText=tab==='status'
-    ?'flex:1;padding:10px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:var(--font)'
-    :'flex:1;padding:10px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--text2);font-family:var(--font)';
-  document.getElementById('dash-tab-analysis').style.cssText=tab==='analysis'
-    ?'flex:1;padding:10px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:var(--font)'
-    :'flex:1;padding:10px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--text2);font-family:var(--font)';
+  const panels=['status','analysis','cost','kpi','region'];
+  panels.forEach(p=>{
+    const el=document.getElementById('dash-panel-'+p);
+    if(el) el.style.display=p===tab?'block':'none';
+    const btn=document.getElementById('dash-tab-'+p);
+    if(btn) btn.classList.toggle('active-tab', p===tab);
+  });
   if(tab==='analysis'&&dashData.length) renderAnalysis();
+  if(tab==='cost') loadCostTab();
+  if(tab==='kpi') loadKpiTab();
+  if(tab==='region') loadRegionTab();
 }
 
 async function loadDashboard(){
@@ -1492,6 +2187,8 @@ const PAGE_SIZE=50;
 
 document.getElementById('date-label').textContent=new Date().toLocaleDateString('ko-KR');
 loadDrivers().then(()=>loadOrders());
+  // 초기 페이지: 오더 현황
+  showPage('orders');
 
 // tbody 체크박스 이벤트 위임 등록 (한 번만)
 document.addEventListener('change', function(e){
@@ -1514,11 +2211,11 @@ function showPage(p){
     const el=document.getElementById('page-'+x);
     if(el) el.style.display=x===p?'block':'none';
   });
-  // nav-item active
-  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
-  const navIdx=['dashboard','orders','drivers','shipto','returns'].indexOf(p);
-  const navItems=document.querySelectorAll('.nav-item');
-  if(navItems[navIdx]) navItems[navIdx].classList.add('active');
+  // nav-item active — data-page 속성 기준으로 (구분선 div 영향 없음)
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    const page=el.getAttribute('data-page');
+    el.classList.toggle('active', page===p);
+  });
   // 타이틀
   const titles={dashboard:'대시보드',orders:'오더 현황',drivers:'기사 관리',shipto:'업체 특이사항',returns:'반품 관리'};
   const titleEl=document.getElementById('page-title');
@@ -2449,6 +3146,9 @@ function showLoading(msg){if(loadingEl){const el=document.getElementById('ldmsg'
 function updateLoading(msg){const el=document.getElementById('ldmsg');if(el)el.textContent=msg;}
 function hideLoading(){if(loadingEl){loadingEl.remove();loadingEl=null;}}
 function showToast(type,msg){const wrap=document.getElementById('toast-wrap');const t=document.createElement('div');t.className=`toast toast-${type}`;t.textContent=msg;wrap.appendChild(t);setTimeout(()=>t.remove(),3500);}
+
+
+
 
 
 
