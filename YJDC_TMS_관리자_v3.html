@@ -495,9 +495,7 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
 
       </div>
 
-      v>
-
-      id="page-orders">
+      <div id="page-orders">
 
         <!-- 날짜 헤더 -->
         <div class="date-header">
@@ -838,22 +836,32 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
 // ===== 실시간 위치 로드 =====
 async function loadDriverLocations(today){
   try{
-    const locs=await sb('GET',
-      `driver_locations?delivery_date=eq.${today}&select=*`).catch(()=>[]);
-    return locs||[];
-  }catch(e){return[];}
+    // delivery_date 기준 + updated_at 최근 2시간 이내 모두 조회
+    const [byDate, byTime] = await Promise.all([
+      sb('GET',`driver_locations?delivery_date=eq.${today}&select=*`).catch(()=>[]),
+      sb('GET',`driver_locations?updated_at=gte.${new Date(Date.now()-7200000).toISOString()}&select=*`).catch(()=>[])
+    ]);
+    // 합쳐서 중복 제거 (driver_name 기준 최신 우선)
+    const merged={};
+    [...(byDate||[]), ...(byTime||[])].forEach(l=>{
+      if(!merged[l.driver_name]||l.updated_at>merged[l.driver_name].updated_at)
+        merged[l.driver_name]=l;
+    });
+    return Object.values(merged);
+  }catch(e){console.warn('GPS 로드 실패',e);return[];}
 }
 
 function renderGpsBadge(loc){
-  if(!loc) return '<span style="font-size:10px;color:var(--text3)">위치 없음</span>';
+  if(!loc||!loc.updated_at) return '';
   const ago=Math.round((Date.now()-new Date(loc.updated_at).getTime())/60000);
-  const fresh=ago<=5;
+  const fresh=ago<=10;
+  if(!fresh&&ago>120) return ''; // 2시간 이상 지난 데이터는 표시 안함
   const statusColor={'배송중':'#a78bfa','픽업':'var(--amber)','업무완료':'var(--green)','대기중':'var(--text3)'}[loc.status]||'var(--text3)';
-  return`<div style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:10px">
-    <span style="width:6px;height:6px;border-radius:50%;background:${fresh?'var(--green)':'var(--text3)'};flex-shrink:0"></span>
-    <span style="color:${statusColor}">${loc.status||'—'}</span>
-    <span style="color:var(--text3)">${ago}분전 갱신</span>
-    ${loc.lat?`<a href="https://map.kakao.com/link/map/${encodeURIComponent(loc.driver_name)},${loc.lat},${loc.lng}" target="_blank" style="color:var(--accent);text-decoration:none">지도↗</a>`:''}
+  return`<div style="display:flex;align-items:center;gap:5px;margin-top:6px;padding-top:6px;border-top:1px solid var(--border);font-size:10px">
+    <span style="width:6px;height:6px;border-radius:50%;background:${fresh?'var(--green)':'var(--amber)'};flex-shrink:0;${fresh?'animation:pulse 2s infinite':''}"></span>
+    <span style="color:${statusColor};font-weight:500">${loc.status||'—'}</span>
+    <span style="color:var(--text3)">${ago<1?'방금':ago+'분전'}</span>
+    ${loc.lat?`<a href="https://map.kakao.com/link/map/${encodeURIComponent(loc.driver_name)},${loc.lat},${loc.lng}" target="_blank" style="color:var(--accent);text-decoration:none;margin-left:auto">📍지도</a>`:''}
   </div>`;
 }
 
@@ -2441,6 +2449,7 @@ function showLoading(msg){if(loadingEl){const el=document.getElementById('ldmsg'
 function updateLoading(msg){const el=document.getElementById('ldmsg');if(el)el.textContent=msg;}
 function hideLoading(){if(loadingEl){loadingEl.remove();loadingEl=null;}}
 function showToast(type,msg){const wrap=document.getElementById('toast-wrap');const t=document.createElement('div');t.className=`toast toast-${type}`;t.textContent=msg;wrap.appendChild(t);setTimeout(()=>t.remove(),3500);}
+
 
 
 
