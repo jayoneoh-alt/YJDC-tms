@@ -1,0 +1,2457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YJDC TMS — 관리자 v3</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#0f1117;--bg2:#181b24;--bg3:#1e2130;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e8eaf0;--text2:#8b90a0;--text3:#555a6e;
+  --accent:#4f8ef7;--accent2:#3a6fd8;
+  --green:#34d399;--amber:#fbbf24;--red:#f87171;--purple:#a78bfa;
+  --font:'IBM Plex Sans KR',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+.layout{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.logo{padding:20px 20px 16px;border-bottom:1px solid var(--border)}
+.logo-title{font-size:13px;font-weight:600;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase}
+.logo-sub{font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--mono)}
+.nav{flex:1;padding:12px 0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:13px;color:var(--text2);cursor:pointer;transition:all 0.15s;border-left:2px solid transparent}
+.nav-item:hover{color:var(--text);background:rgba(255,255,255,0.03)}
+.nav-item.active{color:var(--accent);background:rgba(79,142,247,0.08);border-left-color:var(--accent)}
+.nav-icon{width:16px;height:16px;opacity:0.7;flex-shrink:0}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid var(--border)}
+.db-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-family:var(--mono)}
+.db-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.topbar-title{font-size:14px;font-weight:500}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;border:1px solid var(--border2);font-family:var(--font)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-primary:hover{background:var(--accent2)}
+.btn-success{background:rgba(52,211,153,0.2);color:var(--green);border-color:rgba(52,211,153,0.4)}.btn-success:hover{background:rgba(52,211,153,0.3)}
+.btn-ghost{background:transparent;color:var(--text2)}.btn-ghost:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+.btn-sm{padding:4px 10px;font-size:11px}
+.btn-warning{background:rgba(251,191,36,0.15);color:var(--amber);border-color:rgba(251,191,36,0.3)}.btn-warning:hover{background:rgba(251,191,36,0.25)}
+.btn-danger{background:rgba(248,113,113,0.15);color:var(--red);border-color:rgba(248,113,113,0.3)}
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+.upload-zone{border:1.5px dashed var(--border2);border-radius:10px;padding:24px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg2);margin-bottom:18px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(79,142,247,0.05)}
+.upload-title{font-size:14px;font-weight:500;margin-bottom:3px}
+.upload-sub{font-size:12px;color:var(--text3)}.upload-sub span{color:var(--accent)}
+#file-input{display:none}
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.metric-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px}
+.metric-value{font-size:22px;font-weight:600;font-family:var(--mono);line-height:1}
+.metric-sub{font-size:10px;color:var(--text3);margin-top:3px}
+.mc-blue{border-color:rgba(79,142,247,0.3)}.mc-green{border-color:rgba(52,211,153,0.3)}
+.mc-amber{border-color:rgba(251,191,36,0.3)}.mc-red{border-color:rgba(248,113,113,0.3)}
+
+/* Flow bar */
+.flow-bar{display:flex;align-items:center;margin-bottom:16px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:11px 16px;overflow-x:auto;gap:0;flex-shrink:0}
+.flow-step{display:flex;align-items:center;gap:6px;white-space:nowrap;cursor:pointer;padding:2px 4px;border-radius:4px;transition:background 0.15s}
+.flow-step:hover{background:rgba(255,255,255,0.04)}
+.flow-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.flow-name{font-size:12px;color:var(--text2)}
+.flow-count{font-size:11px;font-family:var(--mono);font-weight:600}
+.flow-arrow{margin:0 8px;color:var(--text3);font-size:13px}
+
+/* Filter & toolbar */
+.toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.filter-label{font-size:11px;color:var(--text3);flex-shrink:0}
+.filter-pill{padding:4px 12px;border-radius:20px;font-size:12px;border:1px solid var(--border2);color:var(--text2);cursor:pointer;transition:all 0.15s;background:transparent;font-family:var(--font);white-space:nowrap}
+.filter-pill:hover{border-color:var(--accent);color:var(--accent)}
+.filter-pill.active{background:rgba(79,142,247,0.15);border-color:var(--accent);color:var(--accent)}
+.driver-pill{padding:4px 12px;border-radius:20px;font-size:12px;border:1px solid var(--border2);color:var(--text2);cursor:pointer;transition:all 0.15s;background:transparent;font-family:var(--font);white-space:nowrap;display:flex;align-items:center;gap:5px}
+.driver-pill:hover{border-color:var(--border2);background:rgba(255,255,255,0.04)}
+.driver-pill.active{border-color:var(--border2);background:rgba(255,255,255,0.08);color:var(--text)}
+.driver-pill .drv-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.search-input{padding:6px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;width:190px;flex-shrink:0}
+.search-input:focus{border-color:var(--accent)}.search-input::placeholder{color:var(--text3)}
+.toolbar-divider{width:1px;height:20px;background:var(--border2);flex-shrink:0}
+.toolbar-spacer{flex:1}
+
+/* Selection action bar */
+.sel-bar{display:none;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.2);border-radius:8px;margin-bottom:12px}
+.sel-bar.show{display:flex}
+.sel-bar-left{font-size:13px;color:var(--green);display:flex;align-items:center;gap:8px}
+.sel-bar-left b{font-family:var(--mono)}
+.sel-bar-right{display:flex;gap:8px;align-items:center}
+
+/* Table */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{background:var(--bg3);position:sticky;top:0;z-index:10}
+th{padding:9px 12px;text-align:left;font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.012)}
+tr.row-selected td{background:rgba(52,211,153,0.05)!important}
+tr.row-changed td{background:rgba(79,142,247,0.05)}
+.td-main{color:var(--text);font-weight:500;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.td-mono{font-family:var(--mono);font-size:11px;color:var(--text3)}
+
+/* Checkbox */
+input[type=checkbox]{width:14px;height:14px;accent-color:var(--green);cursor:pointer}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;white-space:nowrap}
+.badge::before{content:'';width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.badge-접수대기{background:rgba(139,144,160,0.15);color:#8b90a0}.badge-접수대기::before{background:#8b90a0}
+.badge-배차완료{background:rgba(79,142,247,0.15);color:#4f8ef7}.badge-배차완료::before{background:#4f8ef7}
+.badge-배차확정{background:rgba(79,142,247,0.25);color:#4f8ef7;border:1px solid rgba(79,142,247,0.4)}.badge-배차확정::before{background:#4f8ef7}
+.badge-픽업{background:rgba(251,191,36,0.15);color:#fbbf24}.badge-픽업::before{background:#fbbf24}
+.badge-배송중{background:rgba(167,139,250,0.15);color:#a78bfa}.badge-배송중::before{background:#a78bfa}
+.badge-완료{background:rgba(52,211,153,0.15);color:#34d399}.badge-완료::before{background:#34d399}
+.badge-이슈{background:rgba(248,113,113,0.15);color:#f87171}.badge-이슈::before{background:#f87171}
+
+.driver-select{padding:4px 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:4px;color:var(--text);font-size:12px;font-family:var(--font);cursor:pointer;outline:none;max-width:110px}
+.driver-select:focus{border-color:var(--accent)}
+
+/* Driver tag in cell */
+.drv-tag{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--text)}
+.drv-tag .dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-top:1px solid var(--border);font-size:12px;color:var(--text3)}
+.page-btns{display:flex;gap:4px}
+.page-btn{padding:3px 9px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;font-size:11px;font-family:var(--font)}
+.page-btn.active{background:rgba(79,142,247,0.15);border-color:var(--accent);color:var(--accent)}
+
+/* Driver filter panel */
+.drv-filter-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+.drv-section-label{font-size:11px;color:var(--text3);margin-right:2px;flex-shrink:0}
+
+/* Modals */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:24px;width:440px;max-width:92vw}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:8px}
+.modal-body{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:20px}.modal-body b{color:var(--text)}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end}
+.confirm-list{background:var(--bg3);border-radius:6px;padding:10px 14px;margin:10px 0;max-height:200px;overflow-y:auto}
+.confirm-list-item{display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px}
+.confirm-list-item:last-child{border-bottom:none}
+.pw-field label{font-size:12px;color:var(--text3);display:block;margin-bottom:6px}
+.pw-input{width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text);font-size:14px;font-family:var(--mono);outline:none;letter-spacing:0.2em}
+.pw-input:focus{border-color:var(--accent)}
+.pw-error{font-size:12px;color:var(--red);margin-top:6px;display:none}
+
+/* Toast */
+.toast-wrap{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:1000}
+.toast{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:8px;font-size:13px;min-width:260px;animation:slideIn 0.2s ease;border:1px solid var(--border2)}
+.toast-success{background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.3);color:var(--green)}
+.toast-error{background:rgba(248,113,113,0.15);border-color:rgba(248,113,113,0.3);color:var(--red)}
+.toast-info{background:rgba(79,142,247,0.15);border-color:rgba(79,142,247,0.3);color:var(--accent)}
+.toast-warning{background:rgba(251,191,36,0.15);border-color:rgba(251,191,36,0.3);color:var(--amber)}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+.loading-overlay{position:fixed;inset:0;background:rgba(15,17,23,0.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;gap:14px}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-msg{font-size:13px;color:var(--text2);font-family:var(--mono)}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+.empty-title{font-size:14px;color:var(--text2);margin-bottom:4px}
+.order-list{display:flex;flex-direction:column;gap:2px}
+
+.drv-label{font-size:11px;color:var(--text3);display:block;margin-bottom:4px;font-weight:500}
+.drv-input{width:100%;padding:7px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:5px;color:var(--text);font-size:12px;font-family:var(--font);outline:none}
+.drv-input:focus{border-color:var(--accent)}
+.btn-danger{background:rgba(248,113,113,0.15);color:var(--red);border-color:rgba(248,113,113,0.3)}.btn-danger:hover{background:rgba(248,113,113,0.25)}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ===== 오더현황 개선 CSS ===== */
+
+/* 메트릭 카드 개선 */
+.metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
+.metric-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden}
+.metric-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--border2);transition:background 0.15s}
+.metric-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.metric-card.mc-blue::before{background:var(--accent)}
+.metric-card.mc-amber::before{background:var(--amber)}
+.metric-card.mc-green::before{background:var(--green)}
+.metric-card.mc-red::before{background:var(--red)}
+.metric-card.mc-purple::before{background:#a78bfa}
+.metric-label{font-size:11px;color:var(--text3);font-weight:500;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.04em}
+.metric-value{font-size:28px;font-weight:700;line-height:1;font-family:var(--mono)}
+.metric-sub{font-size:10px;color:var(--text3);margin-top:5px}
+
+/* 날짜 헤더 개선 */
+.date-header{display:flex;align-items:center;gap:12px;margin-bottom:14px;padding:12px 16px;background:var(--bg2);border:1px solid var(--border);border-radius:10px}
+.date-header-main{font-size:18px;font-weight:700;color:var(--text);font-family:var(--mono)}
+.date-header-sub{font-size:12px;color:var(--text3)}
+.date-nav-btn{padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;color:var(--text2);font-size:12px;cursor:pointer;transition:all 0.15s}
+.date-nav-btn:hover{background:var(--border2);color:var(--text)}
+
+/* 흐름 바 개선 */
+.flow-bar{display:flex;align-items:center;gap:0;margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.flow-step{display:flex;flex-direction:column;align-items:center;padding:12px 16px;cursor:pointer;transition:all 0.15s;flex:1;gap:4px;border-right:1px solid var(--border)}
+.flow-step:last-child{border-right:none}
+.flow-step:hover{background:rgba(255,255,255,0.04)}
+.flow-step.active-filter{background:rgba(79,142,247,0.08)}
+.flow-name{font-size:10px;color:var(--text3);font-weight:500}
+.flow-count{font-size:20px;font-weight:700;font-family:var(--mono);line-height:1}
+.flow-dot{width:6px;height:6px;border-radius:50%;margin-bottom:2px}
+.flow-arrow{color:var(--text3);font-size:12px;padding:0 4px;flex-shrink:0}
+.flow-issue-sep{width:1px;background:var(--border);height:40px;margin:0 8px;flex-shrink:0}
+
+/* 툴바 개선 */
+.toolbar{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.filter-pill{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:transparent;color:var(--text2);transition:all 0.15s;white-space:nowrap}
+.filter-pill:hover{border-color:var(--border2);color:var(--text)}
+.filter-pill.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.toolbar-divider{width:1px;height:20px;background:var(--border);margin:0 4px;flex-shrink:0}
+.search-input{padding:6px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:12px;font-family:var(--font);outline:none;min-width:220px}
+.search-input:focus{border-color:var(--accent)}
+
+/* 기사 필터 개선 */
+.drv-filter-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px}
+.drv-section-label{font-size:11px;color:var(--text3);font-weight:600;margin-right:2px;flex-shrink:0}
+.driver-pill{padding:4px 10px;border-radius:20px;font-size:12px;border:1px solid var(--border2);color:var(--text2);cursor:pointer;background:var(--bg3);transition:all 0.15s;display:flex;align-items:center;gap:5px;white-space:nowrap}
+.driver-pill:hover{border-color:var(--border2);color:var(--text)}
+.driver-pill.active{background:var(--bg);border-color:var(--accent);color:var(--text)}
+.drv-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* 선택 액션 바 개선 */
+.sel-bar{display:none;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.25);border-radius:10px;margin-bottom:10px;gap:12px}
+.sel-bar.show{display:flex}
+.sel-bar-left{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--green)}
+.sel-bar-right{display:flex;gap:8px;align-items:center;flex-shrink:0}
+
+/* 기사별 요약 카드 */
+.drv-summary-bar{display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}
+.drv-summary-bar::-webkit-scrollbar{display:none}
+.drv-sum-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;flex-shrink:0;min-width:100px;cursor:pointer;transition:all 0.15s}
+.drv-sum-card:hover{border-color:var(--border2)}
+.drv-sum-card.active{border-color:var(--accent);background:rgba(79,142,247,0.08)}
+.dsc-name{font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px}
+.dsc-stats{display:flex;gap:6px;margin-top:4px;font-size:10px;font-family:var(--mono)}
+.dsc-done{color:var(--green)}.dsc-pending{color:var(--amber)}.dsc-total{color:var(--text3)}
+
+/* 테이블 개선 */
+.table-wrap{overflow-x:auto;border-radius:10px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:var(--bg3);color:var(--text3);font-size:11px;font-weight:600;padding:10px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:1}
+td{padding:10px 12px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,0.02)}
+tr.row-selected td{background:rgba(52,211,153,0.06)}
+tr.row-changed td{background:rgba(251,191,36,0.05)}
+.td-mono{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.td-main{font-weight:500}
+
+/* 배차 완료 후 경로최적화 연결 버튼 */
+.route-connect-btn{display:none;align-items:center;gap:8px;padding:10px 16px;background:rgba(79,142,247,0.08);border:1px solid rgba(79,142,247,0.25);border-radius:10px;margin-bottom:10px;font-size:13px;color:var(--accent)}
+.route-connect-btn.show{display:flex}
+
+/* 행별 빠른 배차 확정 버튼 */
+.btn-assign{
+  padding:4px 10px;background:rgba(52,211,153,0.15);color:var(--green);
+  border:1px solid rgba(52,211,153,0.35);border-radius:6px;
+  font-size:11px;font-weight:600;font-family:var(--font);
+  cursor:pointer;white-space:nowrap;transition:all 0.15s;flex-shrink:0
+}
+.btn-assign:hover{background:rgba(52,211,153,0.28);border-color:rgba(52,211,153,0.6)}
+.btn-assign:active{transform:scale(0.96)}
+
+/* 배차 흐름 강조 */
+.assign-flow-hint{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;color:var(--text3);
+  padding:8px 12px;background:rgba(79,142,247,0.05);
+  border-radius:8px;border:1px dashed rgba(79,142,247,0.2);
+  margin-bottom:10px
+}
+.assign-flow-hint .step{
+  display:flex;align-items:center;gap:5px;font-weight:500
+}
+.assign-flow-hint .arrow{color:var(--text3);opacity:0.5}
+
+.unreg-badge{
+  font-size:9px;font-weight:700;
+  background:rgba(248,113,113,0.2);color:var(--red);
+  border:1px solid rgba(248,113,113,0.4);
+  border-radius:3px;padding:0px 4px;
+  margin-left:2px;
+}
+
+/* 대시보드 */
+.dash-sum-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.dash-sum-label{font-size:11px;color:var(--text3);font-weight:500;margin-bottom:6px}
+.dash-sum-val{font-size:28px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1}
+.dash-drv-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;transition:all 0.15s;cursor:default}
+.dash-drv-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.dash-drv-card.has-issue{border-color:rgba(248,113,113,0.4);background:rgba(248,113,113,0.04)}
+.dash-drv-card.all-done{border-color:rgba(52,211,153,0.35);background:rgba(52,211,153,0.04)}
+.dash-drv-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:7px}
+.dash-drv-stats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px;font-size:12px;font-family:var(--mono)}
+.dash-stat-item{display:flex;align-items:center;gap:5px}
+.dash-progress{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:6px}
+.dash-progress-fill{height:100%;border-radius:3px;transition:width 0.5s ease}
+.dash-pct{font-size:11px;font-family:var(--mono);color:var(--text3);text-align:right}
+.dash-last{font-size:10px;color:var(--text3);margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* 대시보드 추가 CSS */
+.dash-sum-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px}
+.dash-sum-label{font-size:11px;color:var(--text3);font-weight:500;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.03em}
+.dash-sum-val{font-size:26px;font-weight:700;font-family:var(--mono);color:var(--text);line-height:1}
+.dash-drv-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:13px;transition:all 0.15s}
+.dash-drv-card:hover{border-color:var(--border2);transform:translateY(-1px)}
+.dash-drv-card.has-issue{border-color:rgba(248,113,113,0.45);background:rgba(248,113,113,0.04)}
+.dash-drv-card.all-done{border-color:rgba(52,211,153,0.4);background:rgba(52,211,153,0.04)}
+.dash-drv-card.outlier{border-color:rgba(251,191,36,0.45);background:rgba(251,191,36,0.04)}
+.sort-btn{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);transition:all 0.15s;font-family:var(--font)}
+.sort-btn:hover{border-color:var(--accent);color:var(--accent)}
+.sort-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.outlier-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px}
+.outlier-high{background:rgba(248,113,113,0.15);color:var(--red)}
+.outlier-warn{background:rgba(251,191,36,0.15);color:var(--amber)}
+.outlier-good{background:rgba(52,211,153,0.15);color:var(--green)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <div class="sidebar">
+    <div class="logo"><div class="logo-title">YJDC TMS</div><div class="logo-sub">v3.0 · Admin</div></div>
+    <nav class="nav">
+      <div class="nav-item" onclick="showPage('dashboard')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="2" y="3" width="8" height="9" rx="1" stroke-width="2"/><rect x="14" y="3" width="8" height="5" rx="1" stroke-width="2"/><rect x="14" y="12" width="8" height="9" rx="1" stroke-width="2"/><rect x="2" y="16" width="8" height="5" rx="1" stroke-width="2"/></svg>
+        대시보드
+      </div>
+      <div style="height:1px;background:var(--border);margin:6px 12px"></div>
+      <div class="nav-item active" onclick="showPage('orders')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/></svg>
+        오더 현황
+      </div>
+      <div class="nav-item" onclick="showPage('drivers')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" stroke-width="2"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke-width="2" stroke-linecap="round"/></svg>
+        기사 관리
+      </div>
+      <div class="nav-item" onclick="showPage('shipto')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke-width="2"/><polyline points="9 22 9 12 15 12 15 22" stroke-width="2"/></svg>
+        업체 특이사항
+      </div>
+      <div class="nav-item" onclick="showPage('returns')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10" stroke-width="2"/><path d="M3.51 15a9 9 0 1 0 .49-4" stroke-width="2" stroke-linecap="round"/></svg>
+        반품 관리
+      </div>
+      <div class="nav-item" onclick="window.open('YJDC_TMS_경로최적화.html','_blank')">
+        <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="19" r="2" stroke-width="2"/><circle cx="19" cy="5" r="2" stroke-width="2"/><path d="M5 17V11a6 6 0 0 1 6-6h2" stroke-width="2" stroke-linecap="round"/><path d="M19 7v6a6 6 0 0 1-6 6H8" stroke-width="2" stroke-linecap="round"/></svg>
+        경로 최적화 ↗
+      </div>
+    </nav>
+    <div class="sidebar-bottom"><div class="db-status"><div class="db-dot"></div>Supabase 연결됨</div></div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="page-title">오더 현황</div>
+      <div class="topbar-right">
+        <span style="font-size:11px;color:var(--text3);font-family:var(--mono)" id="date-label"></span>
+        <button class="btn btn-ghost btn-sm" onclick="loadOrders()">↻ 새로고침</button>
+        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" stroke-width="2"/><polyline points="17 8 12 3 7 8" stroke-width="2"/><line x1="12" y1="3" x2="12" y2="15" stroke-width="2"/></svg>
+          엑셀 업로드
+        </button>
+        <input type="file" id="file-input" accept=".xlsx,.xls" onchange="handleFile(this)">
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- ORDERS PAGE -->
+      <div <!-- DASHBOARD PAGE -->
+      <div id="page-dashboard" style="display:none">
+
+        <!-- 헤더: 날짜 선택 + 새로고침 -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:16px;font-weight:600;color:var(--text)">📊 배송 현황 분석</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px" id="dash-updated">—</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div style="display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:5px 10px">
+              <span style="font-size:11px;color:var(--text3)">기간</span>
+              <input type="date" id="dash-from" class="drv-input" style="width:130px;padding:3px 6px;font-size:12px">
+              <span style="color:var(--text3)">~</span>
+              <input type="date" id="dash-to" class="drv-input" style="width:130px;padding:3px 6px;font-size:12px">
+              <button class="btn btn-primary btn-sm" onclick="loadDashboard()">조회</button>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="setDashDate('today')">오늘</button>
+            <button class="btn btn-ghost btn-sm" onclick="setDashDate('week')">1주</button>
+            <button class="btn btn-ghost btn-sm" onclick="setDashDate('month')">1개월</button>
+            <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text3)">
+              <span id="auto-dot" style="width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite;display:inline-block"></span>
+              자동갱신
+            </div>
+          </div>
+        </div>
+
+        <!-- 탭: 현황 / 분석 -->
+        <div style="display:flex;gap:0;margin-bottom:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden">
+          <button id="dash-tab-status" onclick="switchDashTab('status')" style="flex:1;padding:10px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:var(--font)">🚚 실시간 현황</button>
+          <button id="dash-tab-analysis" onclick="switchDashTab('analysis')" style="flex:1;padding:10px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--text2);font-family:var(--font)">📈 성과 분석</button>
+        </div>
+
+        <!-- ===== 탭1: 실시간 현황 ===== -->
+        <div id="dash-panel-status">
+          <!-- 전체 요약 -->
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px">
+            <div class="dash-sum-card" style="border-top:3px solid var(--text3)"><div class="dash-sum-label">전체 배송지</div><div class="dash-sum-val" id="ds-total">—</div></div>
+            <div class="dash-sum-card" style="border-top:3px solid var(--green)"><div class="dash-sum-label">완료</div><div class="dash-sum-val" style="color:var(--green)" id="ds-done">0</div></div>
+            <div class="dash-sum-card" style="border-top:3px solid #a78bfa"><div class="dash-sum-label">배송중</div><div class="dash-sum-val" style="color:#a78bfa" id="ds-going">0</div></div>
+            <div class="dash-sum-card" style="border-top:3px solid var(--amber)"><div class="dash-sum-label">대기</div><div class="dash-sum-val" style="color:var(--amber)" id="ds-wait">0</div></div>
+            <div class="dash-sum-card" style="border-top:3px solid var(--red)"><div class="dash-sum-label">이슈</div><div class="dash-sum-val" style="color:var(--red)" id="ds-issue">0</div></div>
+          </div>
+          <!-- 진행률 바 -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+              <span style="font-size:12px;font-weight:600">전체 진행률</span>
+              <span style="font-size:15px;font-weight:700;font-family:var(--mono);color:var(--green)" id="ds-pct">0%</span>
+            </div>
+            <div style="height:10px;background:var(--bg3);border-radius:5px;overflow:hidden">
+              <div id="ds-bar" style="height:100%;background:linear-gradient(90deg,var(--green),#6ee7b7);border-radius:5px;transition:width 0.6s;width:0%"></div>
+            </div>
+            <div style="display:flex;gap:14px;margin-top:8px;font-size:11px;font-family:var(--mono);flex-wrap:wrap">
+              <span style="color:var(--green)">✅ <b id="ds-done2">0</b></span>
+              <span style="color:#a78bfa">🚚 <b id="ds-going2">0</b></span>
+              <span style="color:var(--amber)">📦 픽업 <b id="ds-pickup">0</b></span>
+              <span style="color:var(--text3)">⏳ <b id="ds-wait2">0</b></span>
+              <span style="color:var(--red)">⚠️ <b id="ds-issue2">0</b></span>
+            </div>
+          </div>
+          <!-- 이상치 알림 -->
+          <div id="dash-outlier-bar" style="display:none;margin-bottom:14px;background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.25);border-radius:10px;padding:12px 16px">
+            <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:8px">⚡ 이상치 감지</div>
+            <div id="dash-outlier-list" style="display:flex;flex-direction:column;gap:5px;font-size:12px"></div>
+          </div>
+          <!-- 기사별 현황 카드 -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px" id="dash-driver-grid"></div>
+        </div>
+
+        <!-- ===== 탭2: 성과 분석 ===== -->
+        <div id="dash-panel-analysis" style="display:none">
+          <!-- 요약 카드 (상위/하위) -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px" id="dash-top-cards">
+            <div style="background:var(--bg2);border:1px solid rgba(52,211,153,0.3);border-radius:10px;padding:14px">
+              <div style="font-size:11px;color:var(--green);font-weight:600;margin-bottom:10px">🏆 효율 TOP 3</div>
+              <div id="top-efficiency" style="font-size:13px;color:var(--text3)">데이터 로딩 중...</div>
+            </div>
+            <div style="background:var(--bg2);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:14px">
+              <div style="font-size:11px;color:var(--red);font-weight:600;margin-bottom:10px">⚠️ 주목 필요</div>
+              <div id="top-attention" style="font-size:13px;color:var(--text3)">데이터 로딩 중...</div>
+            </div>
+          </div>
+
+          <!-- 정렬 기준 선택 -->
+          <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+            <span style="font-size:11px;color:var(--text3);font-weight:600">정렬 기준</span>
+            <button class="sort-btn active" onclick="sortAnalysis('stops')" id="sb-stops">방문지 수</button>
+            <button class="sort-btn" onclick="sortAnalysis('km')" id="sb-km">거리(km)</button>
+            <button class="sort-btn" onclick="sortAnalysis('cost')" id="sb-cost">주유비</button>
+            <button class="sort-btn" onclick="sortAnalysis('issue')" id="sb-issue">이슈율</button>
+            <button class="sort-btn" onclick="sortAnalysis('efficiency')" id="sb-efficiency">시간당 효율</button>
+          </div>
+
+          <!-- 성과 순위 표 -->
+          <div class="table-wrap">
+            <table id="analysis-table">
+              <thead>
+                <tr>
+                  <th style="width:36px">순위</th>
+                  <th style="min-width:90px">기사</th>
+                  <th style="text-align:center;min-width:70px">방문지 <span style="font-weight:400;color:var(--text3)">(곳)</span></th>
+                  <th style="text-align:center;min-width:70px">거리 <span style="font-weight:400;color:var(--text3)">(km)</span></th>
+                  <th style="text-align:center;min-width:80px">주유비 <span style="font-weight:400;color:var(--text3)">(원)</span></th>
+                  <th style="text-align:center;min-width:70px">완료율</th>
+                  <th style="text-align:center;min-width:60px">이슈</th>
+                  <th style="text-align:center;min-width:80px">시간당 효율</th>
+                  <th style="text-align:center;min-width:70px">이상치</th>
+                </tr>
+              </thead>
+              <tbody id="analysis-tbody">
+                <tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text3)">조회 기간을 선택하고 [조회] 버튼을 눌러주세요</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 균등성 분석 -->
+          <div style="margin-top:14px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px" id="balance-section" style="display:none">
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px">⚖️ 동선 균등성 분석</div>
+            <div id="balance-bars" style="display:flex;flex-direction:column;gap:8px"></div>
+            <div id="balance-advice" style="margin-top:12px;font-size:12px;color:var(--text2);padding:10px;background:var(--bg3);border-radius:8px;display:none"></div>
+          </div>
+        </div>
+
+      </div>
+
+      v>
+
+      id="page-orders">
+
+        <!-- 날짜 헤더 -->
+        <div class="date-header">
+          <div>
+            <div class="date-header-main" id="date-label">—</div>
+            <div class="date-header-sub">출고일 기준</div>
+          </div>
+          <div style="display:flex;gap:6px;margin-left:auto;align-items:center">
+            <span id="date-nav-info" style="font-size:11px;color:var(--text3)"></span>
+            <button class="date-nav-btn" onclick="navDate(-1)">◀ 전날</button>
+            <button class="date-nav-btn" onclick="navDate(1)">다음날 ▶</button>
+            <button class="date-nav-btn" onclick="loadOrders()" style="color:var(--accent);border-color:rgba(79,142,247,0.3)">↻ 최신</button>
+          </div>
+        </div>
+
+        <!-- 엑셀 업로드 -->
+        <div class="upload-zone" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');handleDrop(event)" onclick="document.getElementById('file-input').click()">
+          <div style="font-size:24px;margin-bottom:6px">📂</div>
+          <div class="upload-title">출고 엑셀 파일 업로드</div>
+          <div class="upload-sub">드래그하거나 클릭 · <span>hanex + 반품리스트 자동 인식</span> · 중복 자동 방지</div>
+        </div>
+
+        <!-- 메트릭 카드 -->
+        <div class="metrics">
+          <div class="metric-card mc-blue" onclick="filterStatus('all',null)">
+            <div class="metric-label">총 배송지</div>
+            <div class="metric-value" id="m-total" style="color:var(--accent)">—</div>
+            <div class="metric-sub">ST코드 기준</div>
+          </div>
+          <div class="metric-card" onclick="filterStatus('all',null)">
+            <div class="metric-label">총 라인</div>
+            <div class="metric-value" id="m-lines" style="color:var(--text)">—</div>
+            <div class="metric-sub">SKU 기준</div>
+          </div>
+          <div class="metric-card" onclick="filterStatus('all',null)">
+            <div class="metric-label">투입 기사</div>
+            <div class="metric-value" id="m-drv" style="color:var(--text)">—</div>
+            <div class="metric-sub">배정 인원</div>
+          </div>
+          <div class="metric-card mc-amber" onclick="filterStatus('접수대기',document.getElementById('fp-접수대기'))">
+            <div class="metric-label">배차 대기</div>
+            <div class="metric-value" id="m-wait" style="color:var(--amber)">0</div>
+            <div class="metric-sub">미확정</div>
+          </div>
+          <div class="metric-card mc-green" onclick="filterStatus('완료',document.getElementById('fp-완료'))">
+            <div class="metric-label">완료</div>
+            <div class="metric-value" id="m-done" style="color:var(--green)">0</div>
+            <div class="metric-sub">배송완료</div>
+          </div>
+          <div class="metric-card mc-red" onclick="filterStatus('이슈',document.getElementById('fp-이슈'))">
+            <div class="metric-label">이슈</div>
+            <div class="metric-value" id="m-issue" style="color:var(--red)">0</div>
+            <div class="metric-sub">처리필요</div>
+          </div>
+        </div>
+
+        <!-- 상태 흐름 바 -->
+        <div class="flow-bar">
+          <div class="flow-step" id="fs-접수대기" onclick="filterStatus('접수대기',null)">
+            <div class="flow-dot" style="background:#8b90a0"></div>
+            <div class="flow-count" id="fc-접수대기" style="color:#8b90a0">0</div>
+            <div class="flow-name">접수대기</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step" id="fs-배차완료" onclick="filterStatus('배차완료',null)">
+            <div class="flow-dot" style="background:#4f8ef7;box-shadow:0 0 6px #4f8ef7"></div>
+            <div class="flow-count" id="fc-배차완료" style="color:#4f8ef7">0</div>
+            <div class="flow-name">배차완료</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step" id="fs-픽업" onclick="filterStatus('픽업',null)">
+            <div class="flow-dot" style="background:#fbbf24"></div>
+            <div class="flow-count" id="fc-픽업" style="color:#fbbf24">0</div>
+            <div class="flow-name">픽업</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step" id="fs-배송중" onclick="filterStatus('배송중',null)">
+            <div class="flow-dot" style="background:#a78bfa"></div>
+            <div class="flow-count" id="fc-배송중" style="color:#a78bfa">0</div>
+            <div class="flow-name">배송중</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step" id="fs-완료" onclick="filterStatus('완료',null)">
+            <div class="flow-dot" style="background:#34d399"></div>
+            <div class="flow-count" id="fc-완료" style="color:#34d399">0</div>
+            <div class="flow-name">완료</div>
+          </div>
+          <div class="flow-issue-sep"></div>
+          <div class="flow-step" id="fs-이슈" onclick="filterStatus('이슈',null)" style="border-right:none">
+            <div class="flow-dot" style="background:#f87171"></div>
+            <div class="flow-count" id="fc-이슈" style="color:#f87171">0</div>
+            <div class="flow-name">이슈</div>
+          </div>
+        </div>
+
+        <!-- 배차완료 후 경로최적화 연결 알림 -->
+        <div class="route-connect-btn" id="route-connect-bar">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="5" cy="19" r="2" stroke-width="2"/><circle cx="19" cy="5" r="2" stroke-width="2"/><path d="M5 17V11a6 6 0 0 1 6-6h2" stroke-width="2" stroke-linecap="round"/></svg>
+          <span id="route-connect-msg">배차 확정 완료!</span>
+          <button class="btn btn-primary btn-sm" onclick="window.open('YJDC_TMS_경로최적화.html','_blank')" style="margin-left:auto">🗺 경로 최적화 열기 ↗</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('route-connect-bar').classList.remove('show')">✕</button>
+        </div>
+
+        <!-- 배차 흐름 안내 -->
+        <div class="assign-flow-hint" id="assign-hint">
+          <div class="step">
+            <span style="background:rgba(139,144,160,0.2);color:#8b90a0;padding:2px 8px;border-radius:4px;font-size:11px">① 기사 지정</span>
+            <span style="font-size:10px;color:var(--text3)">드롭다운 선택</span>
+          </div>
+          <span class="arrow">→</span>
+          <div class="step">
+            <span style="background:rgba(52,211,153,0.15);color:var(--green);padding:2px 8px;border-radius:4px;font-size:11px">② 배차 완료</span>
+            <span style="font-size:10px;color:var(--text3)">행별 [확정] 또는 체크 후 일괄 처리</span>
+          </div>
+          <span class="arrow">→</span>
+          <div class="step">
+            <span style="background:rgba(79,142,247,0.15);color:var(--accent);padding:2px 8px;border-radius:4px;font-size:11px">③ 경로 최적화</span>
+            <span style="font-size:10px;color:var(--text3)">확정 후 자동 안내</span>
+          </div>
+          <button onclick="document.getElementById('assign-hint').style.display='none'" style="margin-left:auto;background:none;border:none;color:var(--text3);cursor:pointer;font-size:13px">✕</button>
+        </div>
+        <!-- 선택 액션 바 -->
+        <div class="sel-bar" id="sel-bar">
+          <div class="sel-bar-left">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-width="2.5"/></svg>
+            <b id="sel-count">0개 배송지</b> 선택됨
+            <span style="color:rgba(52,211,153,0.6);font-size:11px;margin-left:4px" id="sel-summary"></span>
+          </div>
+          <div class="sel-bar-right">
+            <button class="btn btn-ghost btn-sm" onclick="clearSelection()">선택 해제</button>
+            <button class="btn btn-success" onclick="confirmSelectedAssign()" style="font-size:13px;padding:8px 16px">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-width="2.5"/></svg>
+              선택 <b id="sel-confirm-count" style="font-family:var(--mono);margin:0 2px">0</b>건 배차 완료
+            </button>
+          </div>
+        </div>
+
+        <!-- 툴바 (상태 필터 + 검색) -->
+        <div class="toolbar">
+          <span class="filter-label" style="font-size:11px;color:var(--text3);font-weight:600;flex-shrink:0">상태</span>
+          <button class="filter-pill active" onclick="filterStatus('all',this)" id="fp-all">전체</button>
+          <button class="filter-pill" onclick="filterStatus('접수대기',this)" id="fp-접수대기">접수대기</button>
+          <button class="filter-pill" onclick="filterStatus('배차완료',this)" id="fp-배차완료">배차완료</button>
+          <button class="filter-pill" onclick="filterStatus('픽업',this)" id="fp-픽업">픽업</button>
+          <button class="filter-pill" onclick="filterStatus('배송중',this)" id="fp-배송중">배송중</button>
+          <button class="filter-pill" onclick="filterStatus('완료',this)" id="fp-완료">완료</button>
+          <button class="filter-pill" onclick="filterStatus('이슈',this)" id="fp-이슈">이슈</button>
+          <div class="toolbar-divider"></div>
+          <input class="search-input" placeholder="ST코드 / 오더번호 / 업체명 검색..." oninput="searchOrders(this.value)">
+        </div>
+
+        <!-- 기사별 필터 -->
+        <div class="drv-filter-wrap" id="drv-filter-wrap">
+          <span class="drv-section-label">기사</span>
+          <button class="driver-pill active" id="dp-all" onclick="filterDriver('all',this)">
+            <span class="drv-dot" style="background:#888;border-radius:2px"></span>전체(—)
+          </button>
+          <div id="drv-pills" style="display:contents"></div>
+        </div>
+
+        <!-- 테이블 -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px"><input type="checkbox" id="chk-all" onchange="toggleAllCheck(this)" title="전체 선택/해제"></th>
+                <th style="min-width:80px">ST 코드</th>
+                <th style="min-width:120px">오더번호</th>
+                <th style="min-width:150px">Ship To</th>
+                <th style="min-width:140px">주소</th>
+                <th style="text-align:center;width:48px">라인</th>
+                <th style="text-align:center;width:52px">수량</th>
+                <th style="min-width:90px">배송기사</th>
+                <th style="width:78px">상태</th>
+                <th style="min-width:108px">배차 지정</th>
+                <th style="min-width:120px">비고</th>
+                <th style="width:58px">액션</th>
+              </tr>
+            </thead>
+            <tbody id="order-tbody">
+              <tr><td colspan="12"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">엑셀 파일을 업로드하면 오더가 표시됩니다</div></div></td></tr>
+            </tbody>
+          </table>
+          <div class="pagination" id="pagination" style="display:none">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span id="page-info" style="font-size:12px;color:var(--text3)"></span>
+              <button class="btn btn-ghost btn-sm" onclick="selectAllPages()" id="sel-all-pages" style="display:none">전체 페이지 모두 선택</button>
+            </div>
+            <div class="page-btns" id="page-btns"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DRIVERS PAGE -->
+      <div id="page-drivers" style="display:none">
+        <!-- 미등록 기사 경고 -->
+        <div id="unreg-drv-alert" style="display:none;align-items:center;gap:10px;padding:12px 16px;margin-bottom:14px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:10px">
+          <span style="font-size:20px">⚠️</span>
+          <div style="flex:1">
+            <div style="font-weight:600;color:var(--red);margin-bottom:3px">미등록 기사가 있습니다</div>
+            <div style="font-size:12px;color:var(--text2)" id="unreg-drv-names"></div>
+          </div>
+          <button onclick="document.getElementById('unreg-drv-alert').style.display='none'" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px">✕</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input class="search-input" id="drv-search" placeholder="이름 / 차량번호 / 권역 검색..." oninput="filterDriversTable(this.value)" style="width:220px">
+            <select class="driver-select" id="drv-status-filter" onchange="filterDriversTable()" style="max-width:100px">
+              <option value="">전체 상태</option>
+              <option value="활성">활성</option>
+              <option value="비활성">비활성</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="renderDriversPage()">↻ 새로고침</button>
+            <button class="btn btn-primary btn-sm" onclick="openNewDriverModal()">+ 기사 추가</button>
+          </div>
+        </div>
+        <div class="table-wrap" style="overflow-x:auto">
+          <table id="drivers-table">
+            <thead>
+              <tr>
+                <th style="min-width:140px">이름 / 차량번호</th>
+                <th style="min-width:110px">연락처</th>
+                <th style="min-width:110px">비상연락처</th>
+                <th style="min-width:90px">차종</th>
+                <th style="min-width:65px">적재량</th>
+                <th style="min-width:160px">배송권역</th>
+                <th style="min-width:90px">온도범위</th>
+                <th style="min-width:90px">보험만기</th>
+                <th style="min-width:65px">연비</th>
+                <th style="min-width:55px">상태</th>
+                <th style="min-width:55px">편집</th>
+              </tr>
+            </thead>
+            <tbody id="drivers-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 기사 편집 모달 -->
+      <div class="modal-bg" id="drv-modal">
+        <div class="modal" style="width:600px;max-height:85vh;overflow-y:auto">
+          <div class="modal-title" id="drv-modal-title">기사 정보 수정</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px" id="drv-form">
+            <div><label class="drv-label">이름 *</label><input class="drv-input" id="df-name" placeholder="홍길동"></div>
+            <div><label class="drv-label">소속</label><input class="drv-input" id="df-branch" placeholder="YJDC"></div>
+            <div><label class="drv-label">직군</label><input class="drv-input" id="df-job_type" placeholder="직배송"></div>
+            <div><label class="drv-label">연락처</label><input class="drv-input" id="df-phone" placeholder="010-0000-0000"></div>
+            <div><label class="drv-label">비상연락 관계</label><input class="drv-input" id="df-emergency_relation" placeholder="배우자"></div>
+            <div><label class="drv-label">비상연락처</label><input class="drv-input" id="df-emergency_phone" placeholder="010-0000-0000"></div>
+            <div style="grid-column:1/-1"><label class="drv-label">자택 주소</label><input class="drv-input" id="df-home_address" placeholder="서울시..."></div>
+            <div><label class="drv-label">차량번호</label><input class="drv-input" id="df-vehicle_number" placeholder="경기00가0000"></div>
+            <div><label class="drv-label">차종</label><input class="drv-input" id="df-vehicle_type" placeholder="1톤 하이탑"></div>
+            <div><label class="drv-label">적재량(kg)</label><input class="drv-input" id="df-load_capacity_kg" type="number" placeholder="1000"></div>
+            <div><label class="drv-label">차량 길이(cm)</label><input class="drv-input" id="df-car_length_cm" type="number" placeholder="280"></div>
+            <div><label class="drv-label">차량 폭(cm)</label><input class="drv-input" id="df-car_width_cm" type="number" placeholder="160"></div>
+            <div><label class="drv-label">차량 높이(cm)</label><input class="drv-input" id="df-car_height_cm" type="number" placeholder="180"></div>
+            <div><label class="drv-label">온도 범위</label><input class="drv-input" id="df-temp_range" placeholder="+40 ~ -30"></div>
+            <div><label class="drv-label">온도 검교정</label><input class="drv-input" id="df-temp_calibration" placeholder="미진행"></div>
+            <div><label class="drv-label">보험 가입일</label><input class="drv-input" id="df-insurance_date" placeholder="2025.10.30"></div>
+            <div><label class="drv-label">보험 한도(원)</label><input class="drv-input" id="df-insurance_limit" type="number" placeholder="50000000"></div>
+            <div><label class="drv-label">연비(km/L)</label><input class="drv-input" id="df-fuel_efficiency" type="number" step="0.1" placeholder="10.0"></div>
+            <div><label class="drv-label">유류단가(원/L)</label><input class="drv-input" id="df-fuel_price_per_liter" type="number" placeholder="1650"></div>
+            <div style="grid-column:1/-1"><label class="drv-label">배송 권역</label><input class="drv-input" id="df-region" placeholder="수원시/화성시..."></div>
+            <div style="grid-column:1/-1"><label class="drv-label">비고</label><textarea class="drv-input" id="df-notes" rows="2" placeholder="특이사항..." style="resize:vertical"></textarea></div>
+            <div><label class="drv-label">상태</label>
+              <select class="drv-input" id="df-status">
+                <option value="활성">활성</option>
+                <option value="비활성">비활성</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-ghost" onclick="closeDrvModal()">취소</button>
+            <button class="btn btn-danger btn-sm" id="drv-delete-btn" onclick="deleteDriver()" style="display:none;margin-right:auto">삭제</button>
+            <button class="btn btn-primary" onclick="saveDrvModal()">저장</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- SHIPTO PAGE -->
+      <div id="page-shipto" style="display:none">
+        <div class="toolbar"><input class="search-input" style="margin-left:0;width:280px" placeholder="업체명 / 코드 검색..." oninput="searchShipTo(this.value)"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>코드</th><th>업체명</th><th>주소</th><th>담당자</th><th>연락처</th><th>배송가능시간</th><th>주차정보</th><th>특이사항</th></tr></thead>
+            <tbody id="shipto-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RETURNS PAGE -->
+      <div id="page-returns" style="display:none">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>오더번호</th><th>Ship To</th><th>주소</th><th>담당자</th><th>연락처</th><th>수량</th><th>담당기사</th><th>회수예정일</th><th>반입DC</th><th>상태</th></tr></thead>
+            <tbody id="returns-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 비밀번호 모달 -->
+<div class="modal-bg" id="pw-modal">
+  <div class="modal" style="width:320px">
+    <div class="modal-title">🔒 관리자 인증</div>
+    <div class="modal-body" style="margin-bottom:14px" id="pw-desc">관리자 비밀번호를 입력해주세요.</div>
+    <div class="pw-field">
+      <label>비밀번호</label>
+      <input class="pw-input" id="pw-input" type="password" placeholder="••••••" onkeydown="if(event.key==='Enter')submitPw()">
+      <div class="pw-error" id="pw-error">비밀번호가 올바르지 않습니다</div>
+    </div>
+    <div class="modal-footer" style="margin-top:16px">
+      <button class="btn btn-ghost" onclick="closePwModal()">취소</button>
+      <button class="btn btn-primary" onclick="submitPw()">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 확인 모달 -->
+<div class="modal-bg" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title"></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">취소</button>
+      <button class="btn btn-success" id="modal-ok-btn" onclick="doConfirm()">확정</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ===== 실시간 위치 로드 =====
+async function loadDriverLocations(today){
+  try{
+    const locs=await sb('GET',
+      `driver_locations?delivery_date=eq.${today}&select=*`).catch(()=>[]);
+    return locs||[];
+  }catch(e){return[];}
+}
+
+function renderGpsBadge(loc){
+  if(!loc) return '<span style="font-size:10px;color:var(--text3)">위치 없음</span>';
+  const ago=Math.round((Date.now()-new Date(loc.updated_at).getTime())/60000);
+  const fresh=ago<=5;
+  const statusColor={'배송중':'#a78bfa','픽업':'var(--amber)','업무완료':'var(--green)','대기중':'var(--text3)'}[loc.status]||'var(--text3)';
+  return`<div style="display:flex;align-items:center;gap:5px;margin-top:6px;font-size:10px">
+    <span style="width:6px;height:6px;border-radius:50%;background:${fresh?'var(--green)':'var(--text3)'};flex-shrink:0"></span>
+    <span style="color:${statusColor}">${loc.status||'—'}</span>
+    <span style="color:var(--text3)">${ago}분전 갱신</span>
+    ${loc.lat?`<a href="https://map.kakao.com/link/map/${encodeURIComponent(loc.driver_name)},${loc.lat},${loc.lng}" target="_blank" style="color:var(--accent);text-decoration:none">지도↗</a>`:''}
+  </div>`;
+}
+
+// ===== 대시보드 =====
+let dashTimer=null;
+let dashData=[];       // 분석용 집계 데이터
+let curSortKey='stops';
+let curDashTab='status';
+
+function setDashDate(range){
+  const to=new Date();
+  const from=new Date();
+  if(range==='week') from.setDate(from.getDate()-6);
+  if(range==='month') from.setDate(from.getDate()-29);
+  const fmt=d=>d.toISOString().slice(0,10);
+  document.getElementById('dash-from').value=fmt(from);
+  document.getElementById('dash-to').value=fmt(to);
+  loadDashboard();
+}
+
+function switchDashTab(tab){
+  curDashTab=tab;
+  document.getElementById('dash-panel-status').style.display=tab==='status'?'block':'none';
+  document.getElementById('dash-panel-analysis').style.display=tab==='analysis'?'block':'none';
+  document.getElementById('dash-tab-status').style.cssText=tab==='status'
+    ?'flex:1;padding:10px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:var(--font)'
+    :'flex:1;padding:10px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--text2);font-family:var(--font)';
+  document.getElementById('dash-tab-analysis').style.cssText=tab==='analysis'
+    ?'flex:1;padding:10px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:var(--accent);color:#fff;font-family:var(--font)'
+    :'flex:1;padding:10px;font-size:13px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--text2);font-family:var(--font)';
+  if(tab==='analysis'&&dashData.length) renderAnalysis();
+}
+
+async function loadDashboard(){
+  if(dashTimer) clearInterval(dashTimer);
+  dashTimer=setInterval(loadDashboard,30000);
+  dashData=[]; // 날짜 변경 시 이전 데이터 초기화
+
+  // 날짜 기본값 (오늘)
+  const fromEl=document.getElementById('dash-from');
+  const toEl=document.getElementById('dash-to');
+  if(!fromEl.value||!toEl.value) setDashDate('today');
+  const fromDate=fromEl.value;
+  const toDate=toEl.value;
+
+  document.getElementById('dash-updated').textContent=
+    '마지막 갱신: '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  try{
+    // 기간 내 오더 조회
+    const orders=await sb('GET',
+      `orders?delivery_date=gte.${fromDate}&delivery_date=lte.${toDate}&select=ship_to_code,ship_to_name,driver_name,status,completed_at,picked_at,started_at,assigned_at,delivery_date&limit=5000`);
+    if(!orders?.length){
+      document.getElementById('ds-total').textContent='0';
+      document.getElementById('dash-driver-grid').innerHTML=
+        '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)">해당 기간 데이터 없음</div>';
+      return;
+    }
+
+    // 기사 정보 (연비, 적재량)
+    const drivers=await sb('GET','drivers?select=name,fuel_efficiency,fuel_price_per_liter,load_capacity_kg,vehicle_type').catch(()=>[]);
+    const drvInfoMap={};
+    (drivers||[]).forEach(d=>drvInfoMap[d.name]=d);
+
+    // 경로 데이터 (거리)
+    const routes=await sb('GET',
+      `delivery_routes?delivery_date=gte.${fromDate}&delivery_date=lte.${toDate}&select=driver_name,delivery_date,total_km_cumulative&order=driver_name,delivery_date`).catch(()=>[]);
+
+    // 기사+날짜별 최대 누적 km
+    const routeKmMap={};
+    (routes||[]).forEach(r=>{
+      const k=r.driver_name+'|'+r.delivery_date;
+      if(!routeKmMap[k]||r.total_km_cumulative>routeKmMap[k]) routeKmMap[k]=r.total_km_cumulative||0;
+    });
+
+    // ST코드 기준 그룹화
+    const stMap={};
+    orders.forEach(o=>{
+      const date=o.delivery_date;
+      const drv=o.driver_name||'미배차';
+      const k=date+'|'+drv+'|'+(o.ship_to_code||(o.ship_to_name||'?'));
+      if(!stMap[k]){
+        stMap[k]={driver:drv,date,status:o.status,completed_at:o.completed_at,started_at:o.started_at,assigned_at:o.assigned_at};
+      }
+      const sp=['이슈','완료','배송중','픽업','배차완료','접수대기'];
+      if(sp.indexOf(o.status)<sp.indexOf(stMap[k].status)) stMap[k].status=o.status;
+      if(o.completed_at&&(!stMap[k].completed_at||o.completed_at>stMap[k].completed_at)) stMap[k].completed_at=o.completed_at;
+    });
+    const groups=Object.values(stMap);
+
+    // 현황 탭: 조회 기간의 가장 최신 날짜 기준
+    const allDates=[...new Set(groups.map(g=>g.date))].sort();
+    const today=allDates[allDates.length-1]||fromDate;
+    const todayGroups=groups.filter(g=>g.date===today);
+    // 날짜 표시 업데이트
+    const dateEl=document.getElementById('dash-updated');
+    if(dateEl) dateEl.textContent='기준일: '+today+' · 갱신: '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+    // ===== 현황 탭 업데이트 =====
+    const total=todayGroups.length;
+    const done=todayGroups.filter(g=>g.status==='완료').length;
+    const going=todayGroups.filter(g=>g.status==='배송중').length;
+    const pickup=todayGroups.filter(g=>g.status==='픽업').length;
+    const wait=todayGroups.filter(g=>['접수대기','배차완료'].includes(g.status)).length;
+    const issue=todayGroups.filter(g=>g.status==='이슈').length;
+    const pct=total?Math.round(done/total*100):0;
+
+    document.getElementById('ds-total').textContent=total;
+    document.getElementById('ds-done').textContent=done;
+    document.getElementById('ds-going').textContent=going;
+    document.getElementById('ds-wait').textContent=wait;
+    document.getElementById('ds-issue').textContent=issue;
+    document.getElementById('ds-pct').textContent=pct+'%';
+    document.getElementById('ds-bar').style.width=pct+'%';
+    document.getElementById('ds-done2').textContent=done;
+    document.getElementById('ds-going2').textContent=going;
+    document.getElementById('ds-pickup').textContent=pickup;
+    document.getElementById('ds-wait2').textContent=wait;
+    document.getElementById('ds-issue2').textContent=issue;
+
+    // 기사별 집계 (전체 기간)
+    const drvMap={};
+    groups.forEach(g=>{
+      if(g.driver==='미배차') return;
+      if(!drvMap[g.driver]) drvMap[g.driver]={
+        name:g.driver,stops:0,done:0,going:0,pickup:0,wait:0,issue:0,
+        days:new Set(),lastDone:null,km:0,cost:0,doneTimeDiffs:[]
+      };
+      const d=drvMap[g.driver];
+      d.stops++;d.days.add(g.date);
+      if(g.status==='완료'){
+        d.done++;
+        if(g.completed_at) d.lastDone=g.completed_at;
+        // 소요시간 계산 (assigned → completed)
+        if(g.assigned_at&&g.completed_at){
+          const diff=(new Date(g.completed_at)-new Date(g.assigned_at))/(1000*60*60);
+          if(diff>0&&diff<24) d.doneTimeDiffs.push(diff);
+        }
+      }
+      else if(g.status==='배송중') d.going++;
+      else if(g.status==='픽업') d.pickup++;
+      else if(['접수대기','배차완료'].includes(g.status)) d.wait++;
+      else if(g.status==='이슈') d.issue++;
+    });
+
+    // 거리 + 비용 매핑
+    Object.keys(drvMap).forEach(drv=>{
+      const d=drvMap[drv];
+      const info=drvInfoMap[drv]||{fuel_efficiency:10,fuel_price_per_liter:1650};
+      const eff=info.fuel_efficiency||10;
+      const price=info.fuel_price_per_liter||1650;
+      // 기간 내 날짜별 km 합산
+      d.km=0;
+      d.days.forEach(date=>{
+        d.km+=(routeKmMap[drv+'|'+date]||0);
+      });
+      d.cost=Math.round(d.km/eff*price);
+      d.days=d.days.size;
+      // 시간당 효율: 완료건수 / 평균소요시간
+      d.avgTime=d.doneTimeDiffs.length
+        ? d.doneTimeDiffs.reduce((a,b)=>a+b,0)/d.doneTimeDiffs.length : null;
+      d.stopsPerDay=d.days?Math.round(d.stops/d.days*10)/10:d.stops;
+      d.efficiency=d.avgTime&&d.done ? Math.round(d.done/d.avgTime*10)/10 : null;
+      d.issueRate=d.stops?Math.round(d.issue/d.stops*100):0;
+      d.doneRate=d.stops?Math.round(d.done/d.stops*100):0;
+    });
+
+    dashData=Object.values(drvMap);
+
+    // ===== 이상치 감지 =====
+    detectOutliers(dashData);
+
+    // ===== 기사별 현황 카드 (오늘) =====
+    await renderStatusCards(todayGroups, drvMap, today);
+
+    // 분석 탭 열려있으면 갱신
+    if(curDashTab==='analysis') renderAnalysis();
+
+  }catch(e){console.error('대시보드 오류',e);}
+}
+
+// ===== 이상치 감지 =====
+function detectOutliers(data){
+  if(!data.length) return;
+  const outliers=[];
+  const avg=(arr,key)=>arr.reduce((s,d)=>s+(d[key]||0),0)/arr.length;
+  const std=(arr,key,mean)=>Math.sqrt(arr.reduce((s,d)=>s+Math.pow((d[key]||0)-mean,2),0)/arr.length);
+
+  // 거리 이상치
+  const kmMean=avg(data,'km');const kmStd=std(data,'km',kmMean);
+  data.forEach(d=>{
+    const z=kmStd>0?(d.km-kmMean)/kmStd:0;
+    if(z>1.5) outliers.push({name:d.name,type:'km',msg:`거리 ${Math.round(d.km)}km — 평균(${Math.round(kmMean)}km)보다 ${Math.round(z*10)/10}σ 높음`,level:'warn'});
+  });
+
+  // 방문지 수 이상치
+  const stopsMean=avg(data,'stops');const stopsStd=std(data,'stops',stopsMean);
+  data.forEach(d=>{
+    const z=stopsStd>0?(d.stops-stopsMean)/stopsStd:0;
+    if(z>1.5) outliers.push({name:d.name,type:'stops',msg:`방문지 ${d.stops}곳 — 평균(${Math.round(stopsMean)}곳)보다 많음`,level:'warn'});
+    if(z<-1.5) outliers.push({name:d.name,type:'stops',msg:`방문지 ${d.stops}곳 — 평균보다 ${Math.abs(Math.round(z*10)/10)}σ 적음 (여유 있음)`,level:'good'});
+  });
+
+  // 비용 이상치
+  const costMean=avg(data,'cost');const costStd=std(data,'cost',costMean);
+  data.forEach(d=>{
+    const z=costStd>0?(d.cost-costMean)/costStd:0;
+    if(z>1.5) outliers.push({name:d.name,type:'cost',msg:`주유비 ${d.cost.toLocaleString()}원 — 평균보다 ${Math.round(z*10)/10}σ 높음`,level:'high'});
+  });
+
+  // 이슈율
+  data.forEach(d=>{
+    if(d.issueRate>=20) outliers.push({name:d.name,type:'issue',msg:`이슈율 ${d.issueRate}% (${d.issue}건/${d.stops}곳)`,level:'high'});
+  });
+
+  // 소요시간
+  const validTime=data.filter(d=>d.avgTime);
+  if(validTime.length>1){
+    const timeMean=avg(validTime,'avgTime');const timeStd=std(validTime,'avgTime',timeMean);
+    validTime.forEach(d=>{
+      const z=timeStd>0?(d.avgTime-timeMean)/timeStd:0;
+      if(z>1.5) outliers.push({name:d.name,type:'time',msg:`평균 소요시간 ${Math.round(d.avgTime*10)/10}h — 평균보다 긺`,level:'warn'});
+    });
+  }
+
+  // 렌더
+  const bar=document.getElementById('dash-outlier-bar');
+  const list=document.getElementById('dash-outlier-list');
+  if(!bar||!list) return;
+  if(!outliers.length){bar.style.display='none';return;}
+  bar.style.display='block';
+  list.innerHTML=outliers.slice(0,8).map(o=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+      <span style="font-weight:600;color:var(--text);min-width:70px">${o.name}</span>
+      <span class="outlier-tag outlier-${o.level}">${{high:'🔴 위험',warn:'🟡 주의',good:'🟢 여유'}[o.level]}</span>
+      <span style="color:var(--text2)">${o.msg}</span>
+    </div>`).join('');
+}
+
+// ===== 현황 카드 렌더 =====
+async function renderStatusCards(todayGroups, drvMap, today){
+  const grid=document.getElementById('dash-driver-grid');
+  if(!grid) return;
+  const drvToday={};
+  todayGroups.forEach(g=>{
+    if(g.driver==='미배차') return;
+    if(!drvToday[g.driver]) drvToday[g.driver]={total:0,done:0,going:0,pickup:0,wait:0,issue:0,lastDone:null};
+    const d=drvToday[g.driver];
+    d.total++;
+    if(g.status==='완료'){d.done++;if(g.completed_at)d.lastDone=g.completed_at;}
+    else if(g.status==='배송중') d.going++;
+    else if(g.status==='픽업') d.pickup++;
+    else if(['접수대기','배차완료'].includes(g.status)) d.wait++;
+    else if(g.status==='이슈') d.issue++;
+  });
+  // GPS 위치 로드
+  const locs=await loadDriverLocations(today||new Date().toISOString().slice(0,10));
+  const locMap={};locs.forEach(l=>locMap[l.driver_name]=l);
+  const drivers=Object.keys(drvToday).sort();
+  if(!drivers.length){
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text3)">오늘 배송 데이터 없음</div>';
+    return;
+  }
+  grid.innerHTML=drivers.map(drv=>{
+    const d=drvToday[drv];
+    const full=drvMap[drv];
+    const pct=d.total?Math.round(d.done/d.total*100):0;
+    const color=drvColor(drv);
+    const hasIssue=d.issue>0;
+    const allDone=d.done===d.total&&d.total>0;
+    const barColor=hasIssue?'var(--red)':allDone?'var(--green)':d.going>0?'#a78bfa':'var(--amber)';
+    const lastStr=d.lastDone?new Date(d.lastDone).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'—';
+    const kmStr=full?.km?`${Math.round(full.km)}km`:'—';
+    return`<div class="dash-drv-card ${hasIssue?'has-issue':allDone?'all-done':''}">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px">
+        <span style="width:9px;height:9px;border-radius:50%;background:${color};flex-shrink:0"></span>
+        <span style="font-size:14px;font-weight:700;color:var(--text);flex:1">${drv}</span>
+        ${hasIssue?'<span title="이슈 있음">⚠️</span>':''}
+        ${allDone?'<span title="완료">✅</span>':''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:8px;font-size:12px;font-family:var(--mono)">
+        <span style="color:var(--green)">✅ ${d.done}</span>
+        <span style="color:#a78bfa">🚚 ${d.going}</span>
+        <span style="color:var(--amber)">📦 ${d.pickup}</span>
+        <span style="color:var(--red)">⚠️ ${d.issue}</span>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">전체 ${d.total}곳 · ${kmStr}</div>
+      <div style="height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-bottom:4px">
+        <div style="height:100%;border-radius:3px;background:${barColor};width:${pct}%;transition:width 0.5s"></div>
+      </div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:right;margin-bottom:6px">${pct}%</div>
+      ${d.lastDone?`<div style="font-size:10px;color:var(--text3);padding-top:6px;border-top:1px solid var(--border)">최근완료 ${lastStr}</div>`:''}
+      ${renderGpsBadge(locMap[drv])}
+    </div>`;
+  }).join('');
+}
+
+// ===== 성과 분석 테이블 =====
+function renderAnalysis(){
+  if(!dashData.length) return;
+  const sorted=[...dashData].sort((a,b)=>{
+    if(curSortKey==='stops') return b.stops-a.stops;
+    if(curSortKey==='km') return b.km-a.km;
+    if(curSortKey==='cost') return b.cost-a.cost;
+    if(curSortKey==='issue') return b.issueRate-a.issueRate;
+    if(curSortKey==='efficiency') return (b.efficiency||0)-(a.efficiency||0);
+    return 0;
+  });
+
+  // 평균 계산 (이상치 기준선)
+  const avg=(key)=>sorted.reduce((s,d)=>s+(d[key]||0),0)/sorted.length;
+  const kmAvg=avg('km'), stopAvg=avg('stops'), costAvg=avg('cost');
+
+  const tbody=document.getElementById('analysis-tbody');
+  if(!tbody) return;
+  tbody.innerHTML=sorted.map((d,i)=>{
+    const kmTag=d.km>kmAvg*1.3?'<span class="outlier-tag outlier-high">↑높음</span>':d.km<kmAvg*0.7?'<span class="outlier-tag outlier-good">↓낮음</span>':'';
+    const stopTag=d.stops>stopAvg*1.3?'<span class="outlier-tag outlier-warn">↑많음</span>':d.stops<stopAvg*0.7?'<span class="outlier-tag outlier-good">↓적음</span>':'';
+    const costTag=d.cost>costAvg*1.3?'<span class="outlier-tag outlier-high">↑과다</span>':'';
+    const issueTag=d.issueRate>=20?'<span class="outlier-tag outlier-high">위험</span>':d.issueRate>=10?'<span class="outlier-tag outlier-warn">주의</span>':'';
+    const effStr=d.efficiency?`${d.efficiency}건/h`:'—';
+    const effTag=d.efficiency&&d.efficiency===Math.max(...sorted.filter(x=>x.efficiency).map(x=>x.efficiency))?'<span class="outlier-tag outlier-good">TOP</span>':'';
+    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1;
+    const color=drvColor(d.name);
+    const hasAlert=d.km>kmAvg*1.3||d.stops>stopAvg*1.3||d.cost>costAvg*1.3||d.issueRate>=10;
+    return`<tr style="${hasAlert?'background:rgba(251,191,36,0.04)':''}">
+      <td style="text-align:center;font-family:var(--mono);font-size:13px">${medal}</td>
+      <td><span style="display:flex;align-items:center;gap:6px">
+        <span style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></span>
+        <b>${d.name}</b>
+        <span style="font-size:10px;color:var(--text3)">${d.days}일</span>
+      </span></td>
+      <td style="text-align:center;font-family:var(--mono)">${d.stops}${stopTag}</td>
+      <td style="text-align:center;font-family:var(--mono)">${Math.round(d.km)}${kmTag}</td>
+      <td style="text-align:center;font-family:var(--mono)">${d.cost.toLocaleString()}${costTag}</td>
+      <td style="text-align:center"><span style="color:${d.doneRate>=80?'var(--green)':d.doneRate>=50?'var(--amber)':'var(--red)'}">${d.doneRate}%</span></td>
+      <td style="text-align:center">${d.issue}<span style="font-size:10px;color:var(--text3)">(${d.issueRate}%)</span>${issueTag}</td>
+      <td style="text-align:center;font-family:var(--mono)">${effStr}${effTag}</td>
+      <td style="text-align:center">${hasAlert?'⚡':'✅'}</td>
+    </tr>`;
+  }).join('');
+
+  // 균등성 분석
+  renderBalanceAnalysis(sorted, stopAvg, kmAvg);
+
+  // TOP/주목 카드
+  renderTopCards(sorted);
+}
+
+function renderTopCards(sorted){
+  const topEl=document.getElementById('top-efficiency');
+  const attEl=document.getElementById('top-attention');
+  if(!topEl||!attEl) return;
+
+  // 효율 TOP: 완료율 높고 이슈 적은 기사
+  const scored=sorted.map(d=>({
+    ...d,
+    score: (d.doneRate||0)*0.5 - (d.issueRate||0)*2 + (d.efficiency||0)*10
+  })).sort((a,b)=>b.score-a.score);
+
+  topEl.innerHTML=scored.slice(0,3).map((d,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span>${['🥇','🥈','🥉'][i]}</span>
+      <span style="font-weight:600;color:var(--text)">${d.name}</span>
+      <span style="font-size:11px;color:var(--text3);margin-left:auto">완료율 ${d.doneRate}% · 이슈 ${d.issueRate}%</span>
+    </div>`).join('');
+
+  // 주목 필요: 이슈율 높거나 거리 과다
+  const attention=sorted.filter(d=>d.issueRate>=10||d.issue>0).sort((a,b)=>b.issueRate-a.issueRate);
+  attEl.innerHTML=attention.slice(0,3).map(d=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span>${d.issueRate>=20?'🔴':'🟡'}</span>
+      <span style="font-weight:600;color:var(--text)">${d.name}</span>
+      <span style="font-size:11px;color:var(--red);margin-left:auto">이슈 ${d.issue}건 (${d.issueRate}%)</span>
+    </div>`).join('')||'<div style="color:var(--green);font-size:13px">✅ 이슈 없음</div>';
+}
+
+function renderBalanceAnalysis(sorted, stopAvg, kmAvg){
+  const section=document.getElementById('balance-section');
+  const bars=document.getElementById('balance-bars');
+  const advice=document.getElementById('balance-advice');
+  if(!section||!bars) return;
+  section.style.display='block';
+
+  const maxStops=Math.max(...sorted.map(d=>d.stops));
+  const maxKm=Math.max(...sorted.map(d=>d.km));
+
+  bars.innerHTML=sorted.map(d=>{
+    const stopPct=maxStops?Math.round(d.stops/maxStops*100):0;
+    const kmPct=maxKm?Math.round(d.km/maxKm*100):0;
+    const stopColor=d.stops>stopAvg*1.3?'var(--amber)':d.stops<stopAvg*0.7?'var(--accent)':'var(--green)';
+    const kmColor=d.km>kmAvg*1.3?'var(--red)':d.km<kmAvg*0.7?'var(--accent)':'var(--green)';
+    return`<div style="display:flex;align-items:center;gap:10px;font-size:12px">
+      <span style="min-width:70px;font-weight:500;color:var(--text)">${d.name}</span>
+      <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="width:40px;font-size:10px;color:var(--text3)">방문지</span>
+          <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${stopPct}%;background:${stopColor};border-radius:4px"></div>
+          </div>
+          <span style="min-width:30px;text-align:right;font-family:var(--mono);color:${stopColor}">${d.stops}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="width:40px;font-size:10px;color:var(--text3)">거리</span>
+          <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
+            <div style="height:100%;width:${kmPct}%;background:${kmColor};border-radius:4px"></div>
+          </div>
+          <span style="min-width:30px;text-align:right;font-family:var(--mono);color:${kmColor}">${Math.round(d.km)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 재배치 조언
+  const highStop=sorted.filter(d=>d.stops>stopAvg*1.3).map(d=>d.name);
+  const lowStop=sorted.filter(d=>d.stops<stopAvg*0.7).map(d=>d.name);
+  if(highStop.length&&lowStop.length&&advice){
+    advice.style.display='block';
+    advice.innerHTML=`💡 <b>동선 재배치 제안:</b> ${highStop.join(', ')} 기사의 배송지 일부를 ${lowStop.join(', ')} 기사에게 이관하면 균등화됩니다. (평균 ${Math.round(stopAvg)}곳/기사)`;
+  } else if(advice) advice.style.display='none';
+}
+
+function sortAnalysis(key){
+  curSortKey=key;
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('sb-'+key);
+  if(btn) btn.classList.add('active');
+  renderAnalysis();
+}
+
+
+function drvColor(n){
+  const DRV_COLORS=['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c','#e879f9','#86efac','#93c5fd'];
+  let h=0;for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))&0xffffffff;
+  return DRV_COLORS[Math.abs(h)%DRV_COLORS.length];
+}
+
+
+function checkUnregisteredInDriverPage(){
+  if(!allOrders.length || !driversList.length) return;
+  const registeredNames = new Set(driversList.map(d=>d.name));
+  const orderDrivers = [...new Set(allOrders.map(o=>o.driver_name).filter(Boolean))];
+  const unregistered = orderDrivers.filter(n=>!registeredNames.has(n));
+  const alert = document.getElementById('unreg-drv-alert');
+  const names = document.getElementById('unreg-drv-names');
+  if(!alert) return;
+  if(unregistered.length){
+    alert.style.display='flex';
+    if(names) names.innerHTML = `오더에 배정되어 있지만 미등록된 기사: ${unregistered.map(n=>`<b style="color:var(--red)">${n}</b>`).join(', ')} — 아래 <b>[+ 기사 추가]</b> 버튼으로 등록해주세요.`;
+  } else {
+    alert.style.display='none';
+  }
+}
+
+// ===== 미등록 기사 체크 =====
+function checkUnregisteredDrivers(){
+  if(!allOrders.length || !driversList.length) return;
+
+  const registeredNames = new Set(driversList.map(d=>d.name));
+  const orderDrivers = [...new Set(allOrders.map(o=>o.driver_name).filter(Boolean))];
+  const unregistered = orderDrivers.filter(n=>!registeredNames.has(n));
+
+  if(unregistered.length === 0) return;
+
+  // 경고 배너 표시
+  showUnregisteredAlert(unregistered);
+
+  // 기사 필터 pill에도 경고 표시
+  unregistered.forEach(name=>{
+    const pid = document.getElementById('dp-'+name.replace(/[^a-zA-Z0-9가-힣]/g,'_'));
+    if(pid){
+      pid.style.borderColor = 'rgba(248,113,113,0.5)';
+      pid.style.color = 'var(--red)';
+      if(!pid.querySelector('.unreg-badge')){
+        pid.insertAdjacentHTML('beforeend','<span class="unreg-badge">미등록</span>');
+      }
+    }
+  });
+}
+
+function showUnregisteredAlert(names){
+  const existing = document.getElementById('unreg-alert');
+  if(existing) existing.remove();
+
+  const bar = document.createElement('div');
+  bar.id = 'unreg-alert';
+  bar.style.cssText = `
+    display:flex;align-items:center;gap:10px;
+    padding:10px 16px;margin-bottom:10px;
+    background:rgba(248,113,113,0.08);
+    border:1px solid rgba(248,113,113,0.3);
+    border-radius:10px;font-size:13px;
+  `;
+  bar.innerHTML = `
+    <span style="font-size:18px;flex-shrink:0">⚠️</span>
+    <div style="flex:1">
+      <div style="font-weight:600;color:var(--red);margin-bottom:2px">미등록 기사 발견</div>
+      <div style="font-size:12px;color:var(--text2)">
+        오더에 배정되어 있지만 <b>기사 관리</b>에 등록되지 않은 기사:
+        ${names.map(n=>`<span style="background:rgba(248,113,113,0.15);color:var(--red);padding:1px 8px;border-radius:4px;margin:0 2px;font-weight:600">${n}</span>`).join('')}
+      </div>
+    </div>
+    <button onclick="showPage('drivers')" style="padding:6px 12px;background:var(--red);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;font-family:var(--font)">
+      기사 관리로 이동
+    </button>
+    <button onclick="this.closest('#unreg-alert').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;flex-shrink:0">✕</button>
+  `;
+
+  // 흐름 힌트 앞에 삽입
+  const hint = document.getElementById('assign-hint');
+  const selBar = document.getElementById('sel-bar');
+  const insertBefore = hint || selBar;
+  if(insertBefore) insertBefore.parentNode.insertBefore(bar, insertBefore);
+}
+
+
+// ===== 단건 빠른 배차 확정 =====
+async function quickConfirm(key){
+  const groups = buildSTGroups(allOrders);
+  const g = groups.find(x=>x.key===key);
+  if(!g) return;
+
+  const drv = pendingDriverChanges[g.ids[0]] || g.driver_name;
+  if(!drv){ showToast('warning','기사를 먼저 지정해주세요'); return; }
+  if(!['접수대기','배차완료'].includes(g.status)){ showToast('warning','확정할 수 없는 상태입니다'); return; }
+
+  // 확인 없이 바로 처리 (단건이므로)
+  showLoading(`${g.ship_to_name||g.key} 배차 확정 중...`);
+  try{
+    for(const id of g.ids){
+      await sb('PATCH',`orders?id=eq.${id}`,{driver_name:drv,status:'배차완료',assigned_at:new Date().toISOString()});
+      const o=allOrders.find(x=>x.id===id);
+      if(o){o.driver_name=drv; o.status='배차완료';}
+      delete pendingDriverChanges[id];
+      selectedIds.delete(id);
+    }
+    updateSelBar(); updateMetrics(); updateFlowBar(); applyFilter();
+    hideLoading();
+    showToast('success',`✅ ${g.ship_to_name||g.key} — ${drv} 배차 완료`);
+    // 경로최적화 알림
+    const rcBar=document.getElementById('route-connect-bar');
+    const rcMsg=document.getElementById('route-connect-msg');
+    if(rcBar){
+      if(rcMsg) rcMsg.textContent=`배차 확정 완료 — 경로를 최적화해보세요!`;
+      rcBar.classList.add('show');
+      setTimeout(()=>rcBar.classList.remove('show'),6000);
+    }
+  }catch(e){hideLoading(); showToast('error','확정 실패: '+e.message);}
+}
+
+
+// ===== 날짜 네비게이션 =====
+let allDelivDates = [];
+let curDateIdx = 0;
+
+async function initDateNav(){
+  try{
+    const dates = await sb('GET','orders?select=delivery_date&order=delivery_date.desc&limit=30');
+    const unique = [...new Set((dates||[]).map(d=>d.delivery_date))];
+    allDelivDates = unique;
+    curDateIdx = 0;
+    updateDateNavUI();
+  }catch(e){}
+}
+
+function updateDateNavUI(){
+  const total = allDelivDates.length;
+  const dateEl = document.getElementById('date-nav-info');
+  if(dateEl && total > 1) dateEl.textContent = `${curDateIdx+1} / ${total}일치`;
+}
+
+async function navDate(dir){
+  if(!allDelivDates.length) await initDateNav();
+  const newIdx = curDateIdx + dir;
+  if(newIdx < 0 || newIdx >= allDelivDates.length) return;
+  curDateIdx = newIdx;
+  const targetDate = allDelivDates[curDateIdx];
+  updateDateNavUI();
+  await loadOrdersByDate(targetDate);
+}
+
+async function loadOrdersByDate(date){
+  showLoading('오더 불러오는 중...');
+  try{
+    const all = await sb('GET',`orders?delivery_date=eq.${date}&select=*&order=ship_to_code,order_number&limit=2000`);
+    allOrders = all || [];
+    const dateEl = document.getElementById('date-label');
+    if(dateEl) dateEl.textContent = date + ' 출고';
+    try{
+      const [stData,retData] = await Promise.all([
+        sb('GET','ship_to_master?select=ship_to_code,notes,available_time,contact_name,contact_tel'),
+        sb('GET','returns?select=order_number')
+      ]);
+      shipToMap={}; (stData||[]).forEach(s=>{if(s.ship_to_code)shipToMap[s.ship_to_code]=s;});
+      returnOrderSet = new Set((retData||[]).map(r=>r.order_number));
+    }catch(e2){}
+    selectedIds = new Set(); pendingDriverChanges = {};
+    updateSelBar(); applyFilter(); updateMetrics(); updateFlowBar(); updateDriverPillCounts();
+    hideLoading();
+  }catch(e){hideLoading(); showToast('error','로드 실패: '+e.message);}
+}
+
+
+const SB_URL='https://ctqozzdfesypfwtecgbm.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0cW96emRmZXN5cGZ3dGVjZ2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMTI3NjQsImV4cCI6MjA5MTU4ODc2NH0.JW-uGdHsPivOejkhBIJNImKej4FRIE5FZVWz3Glln4o';
+const ADMIN_PW='yjdc1234';
+
+// 기사별 색상
+function driverColor(name){let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))&0xffffffff;return DRV_COLORS[Math.abs(h)%DRV_COLORS.length];}
+const DRV_COLORS=['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c','#e879f9','#86efac','#93c5fd','#fde68a','#fca5a5','#c4b5fd','#6ee7b7','#fdba74','#f9a8d4','#67e8f9'];
+let driverColorMap={};
+
+const sb=async(method,path,body,prefer='return=minimal')=>{
+  const headers={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'};
+  if(prefer)headers['Prefer']=prefer;
+  const r=await fetch(`${SB_URL}/rest/v1/${path}`,{method,headers,body:body?JSON.stringify(body):undefined});
+  if(!r.ok)throw new Error(await r.text());
+  return r.status!==204?r.json():null;
+};
+
+// State
+let allOrders=[],filteredOrders=[],driversList=[],allShipTo=[];
+let shipToMap={}, returnOrderSet=new Set();
+let selectedIds=new Set(); // 체크박스 선택된 오더 ID
+let pendingDriverChanges={}; // {id: newDriver} - 드롭다운에서 변경했지만 아직 확정 안된 것
+let curStatus='all', curDriverFilter='all', curSearch='', curPage=1;
+const PAGE_SIZE=50;
+
+document.getElementById('date-label').textContent=new Date().toLocaleDateString('ko-KR');
+loadDrivers().then(()=>loadOrders());
+
+// tbody 체크박스 이벤트 위임 등록 (한 번만)
+document.addEventListener('change', function(e){
+  const chk = e.target;
+  if(!chk.classList.contains('grp-chk')) return;
+  const key = chk.getAttribute('data-key');
+  const status = chk.getAttribute('data-status');
+  const idsRaw = chk.getAttribute('data-ids');
+  if(!key || !status || !idsRaw) return;
+  try{
+    const ids = JSON.parse(idsRaw.replace(/&quot;/g, '"'));
+    onGroupCheck(key, ids, chk.checked, status);
+  }catch(err){ console.error('체크박스 파싱 오류', err); }
+});
+
+// ==================== 페이지 ====================
+function showPage(p){
+  // 모든 페이지 숨기기
+  ['dashboard','orders','drivers','shipto','returns'].forEach(x=>{
+    const el=document.getElementById('page-'+x);
+    if(el) el.style.display=x===p?'block':'none';
+  });
+  // nav-item active
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  const navIdx=['dashboard','orders','drivers','shipto','returns'].indexOf(p);
+  const navItems=document.querySelectorAll('.nav-item');
+  if(navItems[navIdx]) navItems[navIdx].classList.add('active');
+  // 타이틀
+  const titles={dashboard:'대시보드',orders:'오더 현황',drivers:'기사 관리',shipto:'업체 특이사항',returns:'반품 관리'};
+  const titleEl=document.getElementById('page-title');
+  if(titleEl) titleEl.textContent=titles[p]||p;
+  // 페이지별 로드
+  if(p==='dashboard') loadDashboard();
+  if(p==='drivers') renderDriversPage().then(()=>checkUnregisteredInDriverPage());
+  if(p==='shipto') loadShipTo();
+  if(p==='returns') loadReturns();
+  // 대시보드 타이머 정리
+  if(p!=='dashboard'&&typeof dashTimer!=='undefined'&&dashTimer){
+    clearInterval(dashTimer);dashTimer=null;
+  }
+}
+
+// ==================== 기사 ====================
+async function loadDrivers(){
+  try{
+    driversList=await sb('GET','drivers?select=*&order=name');
+    // 색상 매핑
+    driversList.forEach((d,i)=>driverColorMap[d.name]=DRV_COLORS[i%DRV_COLORS.length]);
+    buildDriverPills();
+  }catch(e){console.error(e);}
+}
+
+function buildDriverPills(){
+  const wrap=document.getElementById('drv-pills');
+  if(!wrap) return;
+
+  // 등록된 기사 pill
+  const registeredHtml = driversList.map(d=>`
+    <button class="driver-pill" id="dp-${d.name.replace(/[^a-zA-Z0-9가-힣]/g,'_')}" onclick="filterDriver('${d.name}',this)">
+      <span class="drv-dot" style="background:${driverColorMap[d.name]||'#888'}"></span>
+      ${d.name}
+    </button>`).join('');
+
+  // 미등록 기사 pill (orders에만 있는 기사)
+  const registeredNames = new Set(driversList.map(d=>d.name));
+  const orderDriverNames = [...new Set(allOrders.map(o=>o.driver_name).filter(Boolean))];
+  const unregisteredNames = orderDriverNames.filter(n=>!registeredNames.has(n));
+
+  const unregisteredHtml = unregisteredNames.map(n=>`
+    <button class="driver-pill" id="dp-${n.replace(/[^a-zA-Z0-9가-힣]/g,'_')}"
+      onclick="filterDriver('${n}',this)"
+      style="border-color:rgba(248,113,113,0.45);color:var(--red)">
+      <span class="drv-dot" style="background:var(--red)"></span>
+      ${n}
+      <span class="unreg-badge">미등록</span>
+    </button>`).join('');
+
+  wrap.innerHTML = registeredHtml + unregisteredHtml;
+
+  // 전체 pill 카운트 업데이트
+  updateDriverPillCounts();
+}
+
+async function renderDriversPage(){
+  showLoading('기사 정보 불러오는 중...');
+  try{
+    driversList=await sb('GET','drivers?select=*&order=name');
+    driversList.forEach((d,i)=>driverColorMap[d.name]=driverColor(d.name));
+    buildDriverPills();
+    renderDriversTable(driversList);
+    hideLoading();
+  }catch(e){hideLoading();showToast('error','기사 데이터 로드 실패: '+e.message);}
+}
+
+let drvAllList=[];
+
+function renderDriversTable(list){
+  drvAllList=list;
+  const tbody=document.getElementById('drivers-tbody');
+  if(!list||!list.length){
+    tbody.innerHTML='<tr><td colspan="11"><div class="empty"><div class="empty-icon">👤</div><div class="empty-title">기사 데이터 없음</div></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML=list.map(d=>`<tr>
+    <td>
+      <div style="display:flex;align-items:center;gap:7px">
+        <span class="dot" style="background:${driverColor(d.name)};width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
+        <div>
+          <div style="font-weight:600;color:var(--text);font-size:13px">${d.name}</div>
+          <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:1px">${d.vehicle_number||'—'}</div>
+        </div>
+      </div>
+    </td>
+    <td>
+      <div style="font-family:var(--mono);font-size:12px;color:var(--text)">${d.phone||'—'}</div>
+    </td>
+    <td>
+      ${d.emergency_phone
+        ? `<div style="font-family:var(--mono);font-size:12px;color:var(--text)">${d.emergency_phone}</div>
+           <div style="font-size:10px;color:var(--text3);margin-top:1px">${d.emergency_relation||''}</div>`
+        : '<span style="color:var(--text3)">—</span>'}
+    </td>
+    <td>
+      <div style="font-size:12px;color:var(--text)">${d.vehicle_type||'—'}</div>
+    </td>
+    <td style="text-align:center;font-family:var(--mono);font-size:12px">${d.load_capacity_kg?d.load_capacity_kg+'kg':'—'}</td>
+    <td style="font-size:11px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${d.region||''}">${d.region||'—'}</td>
+    <td style="font-size:12px;color:var(--accent);font-family:var(--mono)">${d.temp_range||'—'}</td>
+    <td style="font-size:12px;color:${isInsuranceExpiringSoon(d.insurance_date)?'var(--amber)':'var(--text3)'}">
+      ${d.insurance_date||'—'}
+      ${isInsuranceExpiringSoon(d.insurance_date)?'<span style="font-size:10px;margin-left:3px">⚠️</span>':''}
+    </td>
+    <td style="font-size:12px;font-family:var(--mono);color:var(--text2)">${d.fuel_efficiency||10}km/L</td>
+    <td><span class="badge badge-${d.status==='활성'?'완료':'이슈'}">${d.status||'활성'}</span></td>
+    <td><button class="btn btn-ghost btn-sm" onclick="openEditDriverModal(${JSON.stringify(d).replace(/"/g,'&quot;')})">편집</button></td>
+  </tr>`).join('');
+}
+
+function isInsuranceExpiringSoon(dateStr){
+  if(!dateStr)return false;
+  try{
+    const d=new Date(dateStr.replace(/\./g,'-'));
+    const diff=(d-new Date())/(1000*60*60*24);
+    return diff<30;
+  }catch(e){return false;}
+}
+
+function filterDriversTable(val){
+  const q=(document.getElementById('drv-search')?.value||'').toLowerCase();
+  const st=document.getElementById('drv-status-filter')?.value||'';
+  const filtered=drvAllList.filter(d=>{
+    const mq=!q||(d.name||'').includes(q)||(d.vehicle_number||'').toLowerCase().includes(q)||(d.region||'').includes(q)||(d.phone||'').includes(q);
+    const ms=!st||d.status===st;
+    return mq&&ms;
+  });
+  renderDriversTable(filtered);
+}
+
+let editingDriverName=null;
+
+function openNewDriverModal(){
+  editingDriverName=null;
+  document.getElementById('drv-modal-title').textContent='기사 추가';
+  document.getElementById('drv-delete-btn').style.display='none';
+  const fields=['name','branch','job_type','phone','emergency_relation','emergency_phone','home_address',
+    'vehicle_number','vehicle_type','load_capacity_kg','car_length_cm','car_width_cm','car_height_cm',
+    'temp_range','temp_calibration','insurance_date','insurance_limit','fuel_efficiency','fuel_price_per_liter','region','notes','status'];
+  fields.forEach(f=>{
+    const el=document.getElementById('df-'+f);
+    if(el) el.value=f==='branch'?'YJDC':f==='status'?'활성':f==='fuel_efficiency'?'10.0':f==='fuel_price_per_liter'?'1650':'';
+  });
+  document.getElementById('drv-modal').classList.add('show');
+}
+
+function openEditDriverModal(d){
+  editingDriverName=d.name;
+  document.getElementById('drv-modal-title').textContent=`기사 정보 수정 — ${d.name}`;
+  document.getElementById('drv-delete-btn').style.display='inline-flex';
+  const fields=['name','branch','job_type','phone','emergency_relation','emergency_phone','home_address',
+    'vehicle_number','vehicle_type','load_capacity_kg','car_length_cm','car_width_cm','car_height_cm',
+    'temp_range','temp_calibration','insurance_date','insurance_limit','fuel_efficiency','fuel_price_per_liter','region','notes','status'];
+  fields.forEach(f=>{
+    const el=document.getElementById('df-'+f);
+    if(el) el.value=d[f]||'';
+  });
+  document.getElementById('drv-modal').classList.add('show');
+}
+
+function closeDrvModal(){
+  document.getElementById('drv-modal').classList.remove('show');
+  editingDriverName=null;
+}
+
+async function saveDrvModal(){
+  const name=document.getElementById('df-name').value.trim();
+  if(!name){showToast('warning','이름을 입력해주세요');return;}
+  const data={
+    name,
+    branch:document.getElementById('df-branch').value||'YJDC',
+    job_type:document.getElementById('df-job_type').value||'직배송',
+    phone:document.getElementById('df-phone').value,
+    emergency_relation:document.getElementById('df-emergency_relation').value,
+    emergency_phone:document.getElementById('df-emergency_phone').value,
+    home_address:document.getElementById('df-home_address').value,
+    vehicle_number:document.getElementById('df-vehicle_number').value,
+    vehicle_type:document.getElementById('df-vehicle_type').value,
+    load_capacity_kg:parseInt(document.getElementById('df-load_capacity_kg').value)||null,
+    car_length_cm:parseInt(document.getElementById('df-car_length_cm').value)||null,
+    car_width_cm:parseInt(document.getElementById('df-car_width_cm').value)||null,
+    car_height_cm:parseInt(document.getElementById('df-car_height_cm').value)||null,
+    temp_range:document.getElementById('df-temp_range').value,
+    temp_calibration:document.getElementById('df-temp_calibration').value,
+    insurance_date:document.getElementById('df-insurance_date').value,
+    insurance_limit:parseInt(document.getElementById('df-insurance_limit').value)||null,
+    fuel_efficiency:parseFloat(document.getElementById('df-fuel_efficiency').value)||10.0,
+    fuel_price_per_liter:parseInt(document.getElementById('df-fuel_price_per_liter').value)||1650,
+    region:document.getElementById('df-region').value,
+    notes:document.getElementById('df-notes').value,
+    status:document.getElementById('df-status').value||'활성',
+  };
+  showLoading('저장 중...');
+  try{
+    if(editingDriverName){
+      await sb('PATCH',`drivers?name=eq.${encodeURIComponent(editingDriverName)}`,data);
+      showToast('success',`✅ ${name} 정보 수정 완료`);
+    }else{
+      await sb('POST','drivers',data,'return=minimal');
+      showToast('success',`✅ ${name} 기사 추가 완료`);
+    }
+    closeDrvModal();
+    await renderDriversPage();
+    hideLoading();
+  }catch(e){hideLoading();showToast('error','저장 실패: '+e.message);}
+}
+
+async function deleteDriver(){
+  if(!editingDriverName)return;
+  if(!confirm(`${editingDriverName} 기사를 삭제하시겠습니까?`))return;
+  showLoading('삭제 중...');
+  try{
+    await sb('DELETE',`drivers?name=eq.${encodeURIComponent(editingDriverName)}`);
+    closeDrvModal();
+    await renderDriversPage();
+    hideLoading();
+    showToast('warning',`${editingDriverName} 삭제 완료`);
+  }catch(e){hideLoading();showToast('error','삭제 실패: '+e.message);}
+}
+
+
+// ==================== 파일 ====================
+function handleDrop(e){const f=e.dataTransfer.files[0];if(f)processFile(f);}
+function handleFile(inp){const f=inp.files[0];if(f)processFile(f);inp.value='';}
+
+function processFile(file){
+  showLoading('엑셀 파일 읽는 중...');
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const hs=wb.Sheets['hanex']||wb.Sheets[wb.SheetNames[0]];
+      const hd=XLSX.utils.sheet_to_json(hs,{defval:''});
+      const rs=wb.Sheets['반품리스트'];
+      const rd=rs?XLSX.utils.sheet_to_json(rs,{defval:''}):[];
+      updateLoading(`오더 ${hd.length}건 저장 중...`);
+      const result=await uploadOrders(hd,file.name);
+      if(rd.length){updateLoading(`반품 ${rd.length}건 저장 중...`);await uploadReturns(rd);}
+      hideLoading();
+      showToast('success',`✅ 신규 ${result.inserted}건 추가 · 중복 ${result.skipped}건 무시`);
+      await loadOrders();
+    }catch(err){hideLoading();showToast('error','업로드 실패: '+err.message);}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function uploadOrders(rows,filename){
+  const dm=filename.match(/(\d{4}-\d{2}-\d{2})/);
+  const dd=dm?dm[1]:new Date().toISOString().split('T')[0];
+  const om={};
+  rows.forEach(row=>{
+    const on=String(row['Order Number']||'').trim();
+    const ln=parseFloat(row['Line']||1);
+    if(!on)return;
+    const k=`${on}_${ln}`;
+    if(!om[k])om[k]={delivery_date:dd,order_number:on,line_number:ln,sku:String(row['SKU']||'').trim(),lot:String(row['Lot']||'').trim(),qty:parseInt(row["Q'ty"]||0),sold_to_name:String(row['Sold To Name']||'').trim(),customer_po:String(row['Customer PO']||'').trim(),ship_to_code:String(row['Ship To']||'').trim(),ship_to_name:String(row['Ship To Description']||'').trim(),address:String(row['주소']||'').trim(),remarks:String(row['Remark']||'').trim(),requests:String(row['요청사항']||'').trim(),driver_name:String(row['배송기사']||'').trim(),mode:String(row['MODE']||'YJDC').trim(),status:'접수대기'};
+  });
+  const orders=Object.values(om);
+  const existing=await sb('GET',`orders?delivery_date=eq.${dd}&select=order_number,line_number`);
+  const existKeys=new Set((existing||[]).map(o=>`${o.order_number}_${o.line_number}`));
+  let skipped=0;
+  const newOrders=orders.filter(o=>{const k=`${o.order_number}_${o.line_number}`;if(existKeys.has(k)){skipped++;return false;}return true;});
+  for(let i=0;i<newOrders.length;i+=100)await sb('POST','orders',newOrders.slice(i,i+100),'resolution=ignore-duplicates,return=minimal');
+  const stm={};rows.forEach(row=>{const c=String(row['Ship To']||'').trim();if(c&&!stm[c])stm[c]={ship_to_code:c,ship_to_name:String(row['Ship To Description']||'').trim(),address:String(row['주소']||'').trim()};});
+  const sts=Object.values(stm);
+  for(let i=0;i<sts.length;i+=100)await sb('POST','ship_to_master',sts.slice(i,i+100),'resolution=ignore-duplicates,return=minimal');
+  return{inserted:newOrders.length,skipped};
+}
+
+async function uploadReturns(rows){
+  const returns=rows.map(row=>({cx_manager:String(row['CX담당자']||'').trim(),order_number:String(row['Order number']||'').trim(),sku:String(row['Item# / Sku']||'').trim(),return_qty:parseInt(row['회수 수량']||0),ship_to_code:String(row['Ship To']||'').trim(),ship_to_name:String(row['Ship to description']||'').trim(),address:String(row['주소 (상세기재)']||'').trim(),contact_name:String(row['회수담당자']||'').trim(),contact_tel:String(row['연락처']||'').trim(),case_number:String(row['Case#']||'').trim(),return_reason:String(row['반품사유 기재']||'').trim(),return_dc:String(row['반입 DC']||'').trim(),driver_name:String(row['담당기사']||'').trim(),status:'접수대기'})).filter(r=>r.order_number);
+  if(returns.length)await sb('POST','returns',returns,'resolution=ignore-duplicates,return=minimal');
+}
+
+// ==================== 오더 로드 ====================
+async function loadOrders(){
+  showLoading('오더 불러오는 중...');
+  try{
+    // Step1: 최신 날짜 조회
+    const dateRes=await sb('GET','orders?select=delivery_date&order=delivery_date.desc&limit=1');
+    if(!dateRes||!dateRes.length){
+      allOrders=[];
+      document.getElementById('order-tbody').innerHTML='<tr><td colspan="12"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">엑셀 파일을 업로드해주세요</div></div></td></tr>';
+      document.getElementById('pagination').style.display='none';
+      updateMetrics();hideLoading();return;
+    }
+    const latest=dateRes[0].delivery_date;
+
+    // Step2: 해당 날짜 전체 조회
+    const all=await sb('GET',`orders?delivery_date=eq.${latest}&select=*&order=ship_to_code,order_number&limit=2000`);
+    if(!all||!all.length){
+      allOrders=[];
+      document.getElementById('order-tbody').innerHTML='<tr><td colspan="12"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">데이터 없음</div></div></td></tr>';
+      document.getElementById('pagination').style.display='none';
+      updateMetrics();hideLoading();return;
+    }
+    allOrders=all;
+
+    // Step3: 날짜 표시
+    const dateEl=document.getElementById('date-label');
+    if(dateEl)dateEl.textContent=latest+' 출고';
+
+    // Step4: 비고용 데이터 로드 (실패해도 계속)
+    try{
+      const [stData,retData]=await Promise.all([
+        sb('GET','ship_to_master?select=ship_to_code,notes,available_time,contact_name,contact_tel'),
+        sb('GET','returns?select=order_number')
+      ]);
+      shipToMap={};(stData||[]).forEach(s=>{if(s.ship_to_code)shipToMap[s.ship_to_code]=s;});
+      returnOrderSet=new Set((retData||[]).map(r=>r.order_number));
+    }catch(e2){console.warn('비고 데이터 로드 실패',e2);}
+
+    selectedIds=new Set();
+    pendingDriverChanges={};
+    updateSelBar();
+    applyFilter();updateMetrics();updateFlowBar();updateDriverPillCounts();
+    // 날짜 네비 초기화
+    initDateNav().then(()=>{
+      curDateIdx = allDelivDates.indexOf(latest);
+      if(curDateIdx<0) curDateIdx=0;
+      updateDateNavUI();
+    });
+    // 미등록 기사 체크
+    checkUnregisteredDrivers();
+    hideLoading();
+  }catch(e){
+    hideLoading();
+    console.error('loadOrders 실패:', e);
+    showToast('error','DB 조회 실패: '+e.message);
+  }
+}
+
+function updateMetrics(){
+  const groups=buildSTGroups(allOrders);
+  document.getElementById('m-total').textContent=[...new Set(allOrders.map(o=>o.ship_to_code).filter(Boolean))].length||'—';
+  document.getElementById('m-lines').textContent=allOrders.length||'—';
+  document.getElementById('m-drv').textContent=[...new Set(allOrders.map(o=>o.driver_name).filter(Boolean))].length||'—';
+  document.getElementById('m-wait').textContent=groups.filter(g=>g.status==='접수대기').length;
+  document.getElementById('m-done').textContent=groups.filter(g=>g.status==='완료').length;
+  document.getElementById('m-issue').textContent=groups.filter(g=>g.status==='이슈').length;
+}
+
+function updateFlowBar(){
+  ['접수대기','배차완료','픽업','배송중','완료','이슈'].forEach(s=>{
+    const el=document.getElementById('fc-'+s);
+    if(el)el.textContent=allOrders.filter(o=>o.status===s).length;
+  });
+}
+
+// ==================== 필터 ====================
+function applyFilter(){
+  filteredOrders=allOrders.filter(o=>{
+    const ms=curStatus==='all'||o.status===curStatus;
+    const drv=pendingDriverChanges[o.id]||o.driver_name||'';
+    const md=curDriverFilter==='all'||drv===curDriverFilter;
+    const mq=!curSearch||o.order_number.includes(curSearch)||(o.ship_to_name||'').includes(curSearch)||(o.ship_to_code||'').includes(curSearch)||(o.driver_name||'').includes(curSearch);
+    return ms&&md&&mq;
+  });
+  // ST코드 기준 그룹화
+  const groups=buildSTGroups(filteredOrders);
+  renderGroups(groups);
+  updateDriverPillCounts();
+}
+
+function buildSTGroups(orders){
+  const map={};
+  const statusPriority=['이슈','배송중','픽업','배차완료','접수대기'];
+  orders.forEach(o=>{
+    const key=o.ship_to_code||(o.ship_to_name||o.id);
+    if(!map[key]){
+      map[key]={
+        key,
+        ship_to_code:o.ship_to_code||'',
+        ship_to_name:o.ship_to_name||'',
+        address:o.address||'',
+        driver_name:o.driver_name||'',
+        status:o.status,
+        orderNumbers:[],
+        ids:[],
+        totalLines:0,
+        totalQty:0,
+      };
+    }
+    const g=map[key];
+    if(!g.orderNumbers.includes(o.order_number)) g.orderNumbers.push(o.order_number);
+    g.ids.push(o.id);
+    g.totalLines+=1;                        // 라인 수 = 행 갯수
+    g.totalQty+=parseInt(o.qty||0);         // 수량 = qty 합산
+    // pending driver
+    if(pendingDriverChanges[o.id]) g.pendingDriver=pendingDriverChanges[o.id];
+    else if(o.driver_name&&!g.driver_name) g.driver_name=o.driver_name;
+    // 상태 우선순위: 높은 것으로
+    if(statusPriority.indexOf(o.status)<statusPriority.indexOf(g.status)) g.status=o.status;
+  });
+  return Object.values(map);
+}
+
+
+function filterStatus(s, el){
+  curStatus=s;
+  // 필터 pill 업데이트
+  document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active'));
+  const pill = el || document.getElementById('fp-'+s) || document.getElementById('fp-all');
+  if(pill) pill.classList.add('active');
+  // 흐름바 active 표시
+  document.querySelectorAll('.flow-step').forEach(fs=>fs.classList.remove('active-filter'));
+  const fs = document.getElementById('fs-'+s);
+  if(fs) fs.classList.add('active-filter');
+  // 체크박스 리셋
+  const chkAll=document.getElementById('chk-all');
+  if(chkAll){chkAll.checked=false; chkAll.indeterminate=false;}
+  curPage=1;
+  applyFilter();
+}
+
+function filterDriver(d,el){
+  curDriverFilter=d;
+  document.querySelectorAll('.driver-pill').forEach(p=>p.classList.remove('active'));
+  if(el)el.classList.add('active');
+  else{const pill=document.getElementById('dp-all');if(pill)pill.classList.add('active');}
+  // 선택 초기화
+  selectedIds=new Set();
+  updateSelBar();
+  applyFilter();
+}
+
+function searchOrders(v){curSearch=v;applyFilter();}
+
+function updateDriverPillCounts(){
+  // 각 기사별 현재 필터된 건수 표시 (전체 기준)
+  driversList.forEach(d=>{
+    const pid=document.getElementById('dp-'+d.name.replace(/[^a-zA-Z0-9가-힣]/g,'_'));
+    if(!pid)return;
+    const cnt=allOrders.filter(o=>(pendingDriverChanges[o.id]||o.driver_name||'')===(d.name)&&(curStatus==='all'||o.status===curStatus)).length;
+    // Update pill text
+    const textNode=pid.childNodes[pid.childNodes.length-1];
+    if(textNode)textNode.textContent=` ${d.name} (${cnt})`;
+  });
+}
+
+// ==================== 테이블 렌더 ====================
+function renderGroups(groups){
+  const tbody=document.getElementById('order-tbody');
+  if(!groups.length){
+    tbody.innerHTML=`<tr><td colspan="12"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">${allOrders.length?'해당 조건의 오더가 없습니다':'엑셀 파일을 업로드해주세요'}</div></div></td></tr>`;
+    document.getElementById('pagination').style.display='none';
+    return;
+  }
+  const total=groups.length, start=(curPage-1)*PAGE_SIZE;
+  const pageData=groups.slice(start,start+PAGE_SIZE);
+  const isLocked=s=>['픽업','배송중','완료'].includes(s);
+  const canSel=s=>['접수대기','배차완료'].includes(s);
+
+  tbody.innerHTML=pageData.map(g=>{
+    const locked=isLocked(g.status);
+    const selectable=canSel(g.status);
+    // 그룹 내 모든 id 선택 여부
+    const allChecked=g.ids.every(id=>selectedIds.has(id));
+    const someChecked=g.ids.some(id=>selectedIds.has(id));
+    const pendingDrv=g.pendingDriver;
+    const curDrv=pendingDrv||g.driver_name||'';
+    const drvColor=driverColorMap[curDrv]||'#888';
+
+    // 오더번호 표시 (최대 3개 + +N건)
+    const ons=g.orderNumbers;
+    const orderHtml=ons.length<=3
+      ? ons.map(on=>`<div class="td-mono" style="font-size:11px">${on}</div>`).join('')
+      : ons.slice(0,3).map(on=>`<div class="td-mono" style="font-size:11px">${on}</div>`).join('')
+        +`<div style="font-size:10px;color:var(--text3)">+${ons.length-3}건</div>`;
+
+    // 배차지정 셀 - 단계별 버튼 흐름
+    const drvOpts=driversList.map(d=>`<option value="${d.name}" ${d.name===curDrv?'selected':''}>${d.name}</option>`).join('');
+    let assignCell='', actionCell='';
+    const hasPending=!!pendingDriverChanges[g.ids[0]];
+    const hasDrv=!!(curDrv);
+
+    if(['접수대기','배차완료'].includes(g.status)){
+      // 접수대기 / 배차완료: 기사 드롭다운 + 확정 버튼
+      const isConfirmed = g.status==='배차완료';
+      assignCell=`
+        <div style="display:flex;align-items:center;gap:6px">
+          <select class="driver-select" style="flex:1;min-width:80px"
+            onchange="onGroupDriverChange('${g.key}',this.value,'${g.driver_name}')">
+            <option value="">기사 선택</option>${drvOpts}
+          </select>
+          ${hasDrv?`<button class="btn-assign" onclick="quickConfirm('${g.key}')">${isConfirmed?'재확정':'확정'}</button>`:''}
+        </div>`;
+      if(isConfirmed){
+        actionCell=`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="requireAdminForUnlockGroup('${g.key}')">해제</button>`;
+      }
+    }else if(locked){
+      // 픽업 이후: 잠금 표시
+      const lockColor = g.status==='픽업'?'var(--amber)':g.status==='배송중'?'#a78bfa':g.status==='완료'?'var(--green)':'var(--text3)';
+      assignCell=`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:${lockColor}">
+        🔒 ${curDrv||'—'}
+      </div>`;
+    }
+
+    // 비고 (반품 + 업체특이사항)
+    const stInfo=shipToMap[g.ship_to_code]||{};
+    const isRet=g.orderNumbers.some(on=>returnOrderSet.has(on));
+    let rParts=[];
+    if(isRet) rParts.push('<span style="background:rgba(248,113,113,0.15);color:#f87171;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:500">🔄 반품</span>');
+    if(stInfo.notes&&stInfo.notes.trim()) rParts.push(`<span style="color:var(--amber);font-size:11px" title="${stInfo.notes}">${stInfo.notes.substring(0,18)}${stInfo.notes.length>18?'…':''}</span>`);
+    if(stInfo.available_time) rParts.push(`<span style="color:var(--text3);font-size:10px">⏰${stInfo.available_time}</span>`);
+    const remarkCell=rParts.length?rParts.join(' '):'<span style="color:var(--text3)">—</span>';
+
+    const rowCls=(allChecked?'row-selected':'')+(pendingDrv?' row-changed':'');
+    return`<tr class="${rowCls}">
+      <td><input type="checkbox" class="grp-chk" ${allChecked?'checked':''} ${selectable?'':'disabled style="opacity:0.2"'} data-key="${g.key.replace(/"/g,'&quot;')}" data-status="${g.status}" data-ids="${JSON.stringify(g.ids).replace(/"/g,'&quot;')}"></td>
+      <td><div style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text)">${g.ship_to_code||'—'}</div></td>
+      <td><div class="order-list">${orderHtml}</div></td>
+      <td class="td-main" title="${g.ship_to_name}">${(g.ship_to_name||'').replace(/-725|-WB-725/g,'').substring(0,20)}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--text3)" title="${g.address}">${g.address.substring(0,26)}</td>
+      <td style="text-align:center;font-family:var(--mono);color:var(--text)">${g.totalLines}</td>
+      <td style="text-align:center;font-family:var(--mono);font-weight:600;color:var(--text)">${g.totalQty}</td>
+      <td><span class="drv-tag"><span class="dot" style="background:${drvColor}"></span>${curDrv||'<span style="color:var(--text3)">미배차</span>'}</span></td>
+      <td><span class="badge badge-${g.status}">${g.status}</span></td>
+      <td>${assignCell}</td>
+      <td>${remarkCell}</td>
+      <td>${actionCell}</td>
+    </tr>`;
+  }).join('');
+
+  const totalPages=Math.ceil(total/PAGE_SIZE);
+  document.getElementById('pagination').style.display='flex';
+  document.getElementById('page-info').textContent=`${start+1}–${Math.min(start+PAGE_SIZE,total)} / 총 ${total}개 배송지`;
+  document.getElementById('page-btns').innerHTML=Array.from({length:Math.min(totalPages,10)},(_,i)=>
+    `<button class="page-btn ${i+1===curPage?'active':''}" onclick="goPage(${i+1})">${i+1}</button>`).join('');
+  const selAllBtn=document.getElementById('sel-all-pages');
+  if(selAllBtn)selAllBtn.style.display=totalPages>1&&selectedIds.size>0?'inline-flex':'none';
+
+  // 헤더 체크박스
+  const chkAll=document.getElementById('chk-all');
+  const pageSel=pageData.filter(g=>canSel(g.status));
+  if(chkAll&&pageSel.length){
+    const ac=pageSel.every(g=>g.ids.every(id=>selectedIds.has(id)));
+    const sc=pageSel.some(g=>g.ids.some(id=>selectedIds.has(id)));
+    chkAll.checked=ac;
+    chkAll.indeterminate=!ac&&sc;
+  }
+}
+
+// renderOrders alias (하위 호환)
+function renderOrders(){ applyFilter(); }
+
+
+function goPage(p){curPage=p;renderOrders();}
+
+// ==================== 체크박스 ====================
+function onRowCheck(id,checked){
+  if(checked)selectedIds.add(id);
+  else selectedIds.delete(id);
+  updateSelBar();
+  // 헤더 체크박스 상태 업데이트
+  const pageData=filteredOrders.slice((curPage-1)*PAGE_SIZE, curPage*PAGE_SIZE);
+  const pageSelectables=pageData.filter(o=>['접수대기','배차완료'].includes(o.status));
+  const chkAll=document.getElementById('chk-all');
+  if(chkAll&&pageSelectables.length){
+    const allChecked=pageSelectables.every(o=>selectedIds.has(o.id));
+    const someChecked=pageSelectables.some(o=>selectedIds.has(o.id));
+    chkAll.checked=allChecked;
+    chkAll.indeterminate=!allChecked&&someChecked;
+  }
+}
+
+function toggleAllCheck(chk){
+  const groups=buildSTGroups(filteredOrders);
+  const pageGroups=groups.slice((curPage-1)*PAGE_SIZE, curPage*PAGE_SIZE);
+  pageGroups.forEach(g=>{
+    if(['접수대기','배차완료'].includes(g.status)){
+      g.ids.forEach(id=>{
+        if(chk.checked) selectedIds.add(id);
+        else selectedIds.delete(id);
+      });
+    }
+  });
+  updateSelBar();
+  // 개별 체크박스 DOM 업데이트
+  document.querySelectorAll('#order-tbody input.grp-chk').forEach(el=>{
+    const idsRaw = el.getAttribute('data-ids');
+    if(!idsRaw) return;
+    try{
+      const ids = JSON.parse(idsRaw.replace(/&quot;/g,'"'));
+      const allC = ids.every(id=>selectedIds.has(id));
+      const someC = ids.some(id=>selectedIds.has(id));
+      el.checked = allC;
+      el.indeterminate = !allC && someC;
+    }catch(e){}
+  });
+}
+
+function selectAllPages(){
+  filteredOrders.forEach(o=>{
+    if(['접수대기','배차완료'].includes(o.status)) selectedIds.add(o.id);
+  });
+  updateSelBar();
+  document.querySelectorAll('#order-tbody input.grp-chk').forEach(el=>{
+    const idsRaw=el.getAttribute('data-ids');
+    if(!idsRaw)return;
+    try{
+      const ids=JSON.parse(idsRaw.replace(/&quot;/g,'"'));
+      el.checked=ids.every(id=>selectedIds.has(id));
+      el.indeterminate=false;
+    }catch(e){}
+  });
+  const grpCount=buildSTGroups(filteredOrders).filter(g=>['접수대기','배차완료'].includes(g.status)).length;
+  showToast('info',`전체 ${grpCount}개 배송지 선택됨`);
+}
+
+function clearSelection(){
+  selectedIds=new Set();
+  updateSelBar();
+  applyFilter();
+}
+
+function updateSelBar(){
+  if(!selectedIds.size){
+    document.getElementById('sel-bar').classList.remove('show');
+    return;
+  }
+  // ST코드 그룹 기준 카운트 (selectedIds는 개별 오더 id)
+  const allGroups = buildSTGroups(allOrders);
+  const selectedGroups = allGroups.filter(g =>
+    g.ids.some(id => selectedIds.has(id)) &&
+    ['접수대기','배차완료'].includes(g.status)
+  );
+  const groupCount = selectedGroups.length;
+
+  document.getElementById('sel-bar').classList.add('show');
+  document.getElementById('sel-count').textContent = groupCount + '개 배송지';
+  document.getElementById('sel-confirm-count').textContent = groupCount;
+
+  // 기사별 요약 (그룹 기준)
+  const drvSummary={};
+  selectedGroups.forEach(g=>{
+    const drv = g.ids.map(id=>pendingDriverChanges[id]).find(Boolean)
+               || g.driver_name || '미배차';
+    drvSummary[drv] = (drvSummary[drv]||0) + 1;
+  });
+  const summaryText = Object.entries(drvSummary).slice(0,3)
+    .map(([d,c])=>`${d} ${c}곳`).join(', ')
+    + (Object.keys(drvSummary).length>3?'..':'');
+  document.getElementById('sel-summary').textContent = summaryText ? `(${summaryText})` : '';
+}
+
+// ==================== 드롭다운 변경 ====================
+function onDriverChange(id,newDrv,prevDrv){
+  if(!newDrv||newDrv===prevDrv){delete pendingDriverChanges[id];}
+  else{pendingDriverChanges[id]=newDrv;}
+  // 드라이버 필터 카운트 업데이트
+  updateDriverPillCounts();
+  // 해당 행만 업데이트 (드라이버 셀)
+  const row=document.querySelector(`input[data-id="${id}"]`)?.closest('tr');
+  if(row){
+    const drvCell=row.cells[6];
+    const curDrv=pendingDriverChanges[id]||newDrv||'';
+    const drvColor=driverColorMap[curDrv]||'#888';
+    drvCell.innerHTML=`<span class="drv-tag"><span class="dot" style="background:${drvColor}"></span>${curDrv||'<span style="color:var(--text3)">미배차</span>'}</span>`;
+    row.classList.toggle('row-changed',!!pendingDriverChanges[id]);
+  }
+}
+
+// ==================== 배차 확정 (선택된 건) ====================
+function confirmSelectedAssign(){
+  if(!selectedIds.size){showToast('warning','확정할 배송지를 선택해주세요');return;}
+
+  // 선택된 id들로 그룹 찾기
+  const groups=buildSTGroups(allOrders);
+  const selectedGroups=groups.filter(g=>
+    g.ids.some(id=>selectedIds.has(id)) &&
+    ['접수대기','배차완료'].includes(g.status)
+  );
+  if(!selectedGroups.length){showToast('warning','배차할 배송지가 없습니다 (접수대기 또는 배차완료 상태만 가능)');return;}
+
+  // 기사 미지정 확인
+  const noDriver=selectedGroups.filter(g=>{
+    const drv=pendingDriverChanges[g.ids[0]]||g.driver_name;
+    return !drv;
+  });
+  if(noDriver.length){
+    showToast('warning',`⚠️ ${noDriver.length}개 배송지에 기사가 지정되지 않았습니다`);return;
+  }
+
+  // 기사별 요약
+  const drvSummary={};
+  selectedGroups.forEach(g=>{
+    const drv=pendingDriverChanges[g.ids[0]]||g.driver_name;
+    drvSummary[drv]=(drvSummary[drv]||0)+1;
+  });
+  const summaryItems=Object.entries(drvSummary).map(([d,c])=>`
+    <div class="confirm-list-item">
+      <span style="width:8px;height:8px;border-radius:50%;background:${driverColor(d)};flex-shrink:0"></span>
+      <b>${d}</b><span style="margin-left:auto;font-family:var(--mono);color:var(--accent)">${c}개 배송지</span>
+    </div>`).join('');
+
+  document.getElementById('sel-confirm-count').textContent=selectedGroups.length;
+  openModal('배차 확정',
+    `선택한 <b>${selectedGroups.length}개 배송지</b>를 배차 완료 처리합니다.
+    <div class="confirm-list">${summaryItems}</div>
+    배차 완료 후 기사 앱에서 픽업 처리가 가능합니다.<br>변경은 <b>[해제]</b> 버튼 + 관리자 인증이 필요합니다.`,
+    ()=>doConfirmAssign(selectedGroups)
+  );
+}
+
+async function doConfirmAssign(selectedGroups){
+  closeModal();showLoading('배차 확정 중...');
+  try{
+    let total=0;
+    for(const g of selectedGroups){
+      // 그룹 내 첫 pending 또는 기존 driver 사용
+      const drv=pendingDriverChanges[g.ids[0]]||g.driver_name;
+      for(const id of g.ids){
+        await sb('PATCH',`orders?id=eq.${id}`,{driver_name:drv,status:'배차완료',assigned_at:new Date().toISOString()});
+        const o=allOrders.find(x=>x.id===id);
+        if(o){o.driver_name=drv;o.status='배차완료';}
+        delete pendingDriverChanges[id];
+        selectedIds.delete(id);
+        total++;
+      }
+    }
+    updateSelBar();updateMetrics();updateFlowBar();applyFilter();
+    hideLoading();
+    showToast('success',`✅ ${selectedGroups.length}개 배송지 배차 확정 완료`);
+    // 경로최적화 연결 알림
+    const rcBar = document.getElementById('route-connect-bar');
+    const rcMsg = document.getElementById('route-connect-msg');
+    if(rcBar){
+      if(rcMsg) rcMsg.textContent = `${selectedGroups.length}개 배송지 배차 확정 완료 — 경로를 최적화해보세요!`;
+      rcBar.classList.add('show');
+      setTimeout(()=>rcBar.classList.remove('show'), 8000);
+    }
+  }catch(e){hideLoading();showToast('error','배차 확정 실패: '+e.message);}
+}
+
+// ==================== 배차완료 기사 변경 (관리자 인증) ====================
+function requireAdminForChange(id,newDrv,prevDrv,selectEl){
+  if(!newDrv||newDrv===prevDrv){selectEl.value=prevDrv;return;}
+  requireAdminPw(()=>{
+    openModal('배차 변경',
+      `<b>${prevDrv||'미배차'}</b> → <b>${newDrv}</b>으로 변경하시겠습니까?`,
+      async()=>{
+        closeModal();
+        try{
+          await sb('PATCH',`orders?id=eq.${id}`,{driver_name:newDrv,assigned_at:new Date().toISOString()});
+          const o=allOrders.find(x=>x.id===id);if(o)o.driver_name=newDrv;
+          applyFilter();updateMetrics();
+          showToast('success',`✅ 기사 변경 완료: ${newDrv}`);
+        }catch(e){selectEl.value=prevDrv;showToast('error','변경 실패: '+e.message);}
+      },()=>selectEl.value=prevDrv
+    );
+  },()=>selectEl.value=prevDrv);
+}
+
+// ==================== 배차 해제 → 접수대기 ====================
+function requireAdminForUnlock(id){
+  requireAdminPw(()=>{
+    openModal('배차 수정',
+      `이 오더의 배차 확정을 해제합니다.<br>상태가 <b>접수대기</b>로 되돌아갑니다.<br>기사님 앱에서 사라지며 다시 배차 지정이 필요합니다.`,
+      async()=>{
+        closeModal();
+        try{
+          await sb('PATCH',`orders?id=eq.${id}`,{status:'접수대기',assigned_at:null});
+          const o=allOrders.find(x=>x.id===id);if(o)o.status='접수대기';
+          updateMetrics();updateFlowBar();applyFilter();
+          showToast('warning','⚠️ 접수대기로 되돌아갔습니다. 배차를 다시 지정해주세요.');
+        }catch(e){showToast('error','실패: '+e.message);}
+      }
+    );
+  });
+}
+
+// ==================== 관리자 비밀번호 ====================
+let pwAction=null,pwCancelAction=null;
+function requireAdminPw(onSuccess,onCancel){
+  pwAction=onSuccess;pwCancelAction=onCancel||null;
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-error').style.display='none';
+  document.getElementById('pw-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('pw-input').focus(),100);
+}
+function submitPw(){
+  const val=document.getElementById('pw-input').value;
+  if(val===ADMIN_PW){
+    document.getElementById('pw-modal').classList.remove('show');
+    if(pwAction)pwAction();pwAction=null;pwCancelAction=null;
+  }else{
+    document.getElementById('pw-error').style.display='block';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+function closePwModal(){
+  document.getElementById('pw-modal').classList.remove('show');
+  if(pwCancelAction)pwCancelAction();
+  pwAction=null;pwCancelAction=null;
+}
+
+// ==================== 확인 모달 ====================
+let modalAction=null;
+function openModal(title,body,onConfirm){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=body;
+  modalAction=onConfirm;
+  document.getElementById('confirm-modal').classList.add('show');
+}
+function closeModal(){document.getElementById('confirm-modal').classList.remove('show');modalAction=null;}
+function doConfirm(){if(modalAction)modalAction();}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    if(document.getElementById('pw-modal').classList.contains('show'))closePwModal();
+    else closeModal();
+  }
+  if(e.key==='Enter'&&document.getElementById('pw-modal').classList.contains('show'))submitPw();
+});
+
+// ==================== Ship To ====================
+async function loadShipTo(){
+  try{allShipTo=await sb('GET','ship_to_master?select=*&order=ship_to_name');renderShipTo(allShipTo);}catch(e){showToast('error','업체 로드 실패');}
+}
+function renderShipTo(data){
+  const tbody=document.getElementById('shipto-tbody');
+  if(!data||!data.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><div class="empty-icon">🏢</div><div class="empty-title">데이터 없음</div></div></td></tr>';return;}
+  tbody.innerHTML=data.map(s=>`<tr><td class="td-mono">${s.ship_to_code}</td><td class="td-main">${(s.ship_to_name||'').replace(/-725|-WB-725/g,'')}</td><td style="font-size:11px;color:var(--text3);max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.address||'—'}</td><td>${s.contact_name||'—'}</td><td class="td-mono">${s.contact_tel||'—'}</td><td style="font-size:11px">${s.available_time||'—'}</td><td style="font-size:11px">${s.parking_info||'—'}</td><td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:${s.notes?'var(--amber)':'var(--text3)'}" title="${s.notes||''}">${s.notes||'—'}</td></tr>`).join('');
+}
+function searchShipTo(v){renderShipTo(allShipTo.filter(s=>(s.ship_to_name||'').includes(v)||(s.ship_to_code||'').includes(v)));}
+
+// ==================== 반품 ====================
+async function loadReturns(){
+  try{
+    const returns=await sb('GET','returns?select=*&order=created_at.desc');
+    const tbody=document.getElementById('returns-tbody');
+    if(!returns||!returns.length){tbody.innerHTML='<tr><td colspan="12"><div class="empty"><div class="empty-icon">🔄</div><div class="empty-title">반품 데이터 없음</div></div></td></tr>';return;}
+    tbody.innerHTML=returns.map(r=>`<tr><td class="td-mono">${r.order_number}</td><td class="td-main">${(r.ship_to_name||'').substring(0,18)}</td><td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.address||''}</td><td>${r.contact_name||'—'}</td><td class="td-mono" style="font-size:11px">${r.contact_tel||'—'}</td><td style="text-align:center;font-family:var(--mono)">${r.return_qty||0}</td><td>${r.driver_name||'—'}</td><td class="td-mono">${r.scheduled_date||'—'}</td><td style="font-size:11px">${r.return_dc||'—'}</td><td><span class="badge badge-${r.status||'접수대기'}">${r.status||'접수대기'}</span></td></tr>`).join('');
+  }catch(e){showToast('error','반품 로드 실패');}
+}
+
+// ==================== 공통 UI ====================
+function onGroupCheck(key, ids, checked, status){
+  if(!['접수대기','배차완료'].includes(status)) return;
+  ids.forEach(id=>{ if(checked) selectedIds.add(id); else selectedIds.delete(id); });
+  updateSelBar();
+  syncHeaderCheckbox();
+}
+
+function syncHeaderCheckbox(){
+  const chkAll=document.getElementById('chk-all');
+  if(!chkAll)return;
+  // 현재 화면의 grp-chk 체크박스에서 직접 읽기
+  const allChks=[...document.querySelectorAll('#order-tbody input.grp-chk:not(:disabled)')];
+  if(!allChks.length){chkAll.checked=false;chkAll.indeterminate=false;return;}
+  const allC=allChks.every(el=>el.checked);
+  const someC=allChks.some(el=>el.checked);
+  chkAll.checked=allC;
+  chkAll.indeterminate=!allC&&someC;
+}
+
+function onGroupDriverChange(key, newDrv, prevDrv){
+  allOrders.filter(o=>(o.ship_to_code||o.ship_to_name||o.id)===key).forEach(o=>{
+    if(!newDrv||newDrv===prevDrv) delete pendingDriverChanges[o.id];
+    else pendingDriverChanges[o.id]=newDrv;
+  });
+  updateDriverPillCounts();
+  // DOM 직접 업데이트 - 재렌더링 없이 해당 행만 변경
+  const curDrv = newDrv || prevDrv || '';
+  const drvColorVal = driverColorMap[curDrv] || '#888';
+  document.querySelectorAll('#order-tbody tr').forEach(tr=>{
+    const sel = tr.querySelector('select.driver-select');
+    if(!sel) return;
+    // 이 행이 해당 key의 행인지 확인 (data-key 또는 select의 onchange로)
+    const onch = sel.getAttribute('onchange') || '';
+    if(onch.includes("'"+key+"'") || onch.includes('"'+key+'"')){
+      // 기사 표시 셀 업데이트 (8번째 td)
+      const drvCell = tr.cells[7];
+      if(drvCell){
+        drvCell.innerHTML = curDrv
+          ? `<span class="drv-tag"><span class="dot" style="background:${drvColorVal}"></span>${curDrv}</span>`
+          : `<span class="drv-tag"><span style="color:var(--text3)">미배차</span></span>`;
+      }
+      tr.classList.toggle('row-changed', !!pendingDriverChanges[allOrders.find(o=>(o.ship_to_code||o.ship_to_name||o.id)===key)?.id]);
+    }
+  });
+}
+
+function requireAdminForGroupChange(key, newDrv, prevDrv, sel){
+  if(!newDrv||newDrv===prevDrv){sel.value=prevDrv;return;}
+  requireAdminPw(()=>{
+    openModal('배차 변경',`<b>${prevDrv||'미배차'}</b> → <b>${newDrv}</b>으로 변경하시겠습니까?`,async()=>{
+      closeModal();
+      try{
+        const ids=allOrders.filter(o=>(o.ship_to_code||o.ship_to_name||o.id)===key).map(o=>o.id);
+        for(const id of ids) await sb('PATCH',`orders?id=eq.${id}`,{driver_name:newDrv,assigned_at:new Date().toISOString()});
+        allOrders.filter(o=>(o.ship_to_code||o.ship_to_name||o.id)===key).forEach(o=>o.driver_name=newDrv);
+        applyFilter();updateMetrics();
+        showToast('success',`✅ 기사 변경: ${newDrv}`);
+      }catch(e){sel.value=prevDrv;showToast('error','변경 실패: '+e.message);}
+    },()=>sel.value=prevDrv);
+  },()=>sel.value=prevDrv);
+}
+
+function requireAdminForUnlockGroup(key){
+  requireAdminPw(()=>{
+    openModal('배차 해제',
+      '이 배송지의 배차를 해제합니다.<br>상태가 <b>접수대기</b>로 돌아가며 기사 재지정이 필요합니다.',
+      async()=>{
+        closeModal();
+        try{
+          const ids=allOrders.filter(o=>(o.ship_to_code||o.ship_to_name||o.id)===key).map(o=>o.id);
+          for(const id of ids){
+            await sb('PATCH',`orders?id=eq.${id}`,{status:'접수대기',driver_name:null,assigned_at:null});
+            const o=allOrders.find(x=>x.id===id);
+            if(o){o.status='접수대기';o.driver_name=null;}
+            delete pendingDriverChanges[id];
+          }
+          updateMetrics();updateFlowBar();applyFilter();
+          showToast('warning','⚠️ 배차 해제 — 접수대기로 돌아갔습니다');
+        }catch(e){showToast('error','실패: '+e.message);}
+      }
+    );
+  });
+}
+
+
+let loadingEl=null;
+function showLoading(msg){if(loadingEl){const el=document.getElementById('ldmsg');if(el)el.textContent=msg;return;}loadingEl=document.createElement('div');loadingEl.className='loading-overlay';loadingEl.innerHTML=`<div class="loading-spinner"></div><div class="loading-msg" id="ldmsg">${msg}</div>`;document.body.appendChild(loadingEl);}
+function updateLoading(msg){const el=document.getElementById('ldmsg');if(el)el.textContent=msg;}
+function hideLoading(){if(loadingEl){loadingEl.remove();loadingEl=null;}}
+function showToast(type,msg){const wrap=document.getElementById('toast-wrap');const t=document.createElement('div');t.className=`toast toast-${type}`;t.textContent=msg;wrap.appendChild(t);setTimeout(()=>t.remove(),3500);}
+
+
+
+
+
+
+
+
+
+
+
+
+
+</script>

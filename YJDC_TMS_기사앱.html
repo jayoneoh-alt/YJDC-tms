@@ -1,0 +1,1127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f1117">
+<title>YJDC 배송 앱</title>
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=781a3c294cf521fb49a72736283d31d5&libraries=services"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#0f1117;--bg2:#181b24;--bg3:#1e2130;
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+  --text:#e8eaf0;--text2:#8b90a0;--text3:#555a6e;
+  --accent:#4f8ef7;--green:#34d399;--amber:#fbbf24;--red:#f87171;--purple:#a78bfa;
+  --font:'IBM Plex Sans KR',sans-serif;--mono:'IBM Plex Mono',monospace;
+  --safe-top:env(safe-area-inset-top);--safe-bottom:env(safe-area-inset-bottom);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--text);display:flex;flex-direction:column}
+.screen{display:none;flex-direction:column;height:100%;overflow:hidden}
+.screen.active{display:flex}
+
+/* ===== 로그인 ===== */
+.login-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:28px;overflow-y:auto}
+.login-logo-title{font-size:24px;font-weight:700;color:var(--accent)}
+.login-logo-sub{font-size:12px;color:var(--text3);margin-top:4px;text-align:center}
+.login-card{width:100%;max-width:360px;background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.lbl{font-size:12px;color:var(--text3);margin-bottom:5px;font-weight:500}
+.drv-sel-btn{width:100%;padding:13px 16px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:15px;font-family:var(--font);text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+.placeholder{color:var(--text3)}
+.pin-dots{display:flex;gap:12px;justify-content:center;padding:6px 0}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:2px solid var(--border2);transition:all 0.15s}
+.pin-dot.filled{background:var(--accent);border-color:var(--accent)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pin-btn{padding:15px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:20px;font-weight:600;font-family:var(--mono);cursor:pointer;text-align:center;transition:all 0.1s;user-select:none}
+.pin-btn:active{background:var(--border2);transform:scale(0.94)}
+.pin-btn.del{font-size:15px;color:var(--text2)}
+.pin-btn.empty{background:transparent;border-color:transparent;pointer-events:none}
+.login-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;font-family:var(--font);cursor:pointer}
+.login-btn:disabled{opacity:0.35;cursor:not-allowed}
+.login-err{font-size:12px;color:var(--red);text-align:center;display:none}
+
+/* ===== 공통 헤더 ===== */
+.app-header{display:flex;align-items:center;gap:10px;padding:calc(var(--safe-top)+10px) 14px 10px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;min-height:52px}
+.header-title{font-size:15px;font-weight:600;flex:1}
+.header-sub{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.icon-btn{width:36px;height:36px;border-radius:50%;background:var(--bg3);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;flex-shrink:0}
+
+/* ===== 배송 목록 ===== */
+.route-summary{display:flex;gap:8px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none}
+.route-summary::-webkit-scrollbar{display:none}
+.rs-chip{display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;white-space:nowrap;flex-shrink:0}
+.rs-chip .icon{font-size:13px}
+.rs-chip .val{font-size:12px;font-family:var(--mono);font-weight:600;color:var(--text)}
+.rs-chip .unit{font-size:10px;color:var(--text3)}
+.stat-bar{display:flex;gap:8px;padding:8px 14px 10px;flex-wrap:wrap;flex-shrink:0;background:var(--bg2);border-bottom:1px solid var(--border)}
+.stat-pill{font-size:11px;padding:3px 10px;border-radius:20px;font-family:var(--mono);font-weight:500}
+.s-total{background:rgba(79,142,247,0.15);color:var(--accent)}
+.s-done{background:rgba(52,211,153,0.15);color:var(--green)}
+.s-pending{background:rgba(251,191,36,0.15);color:var(--amber)}
+.s-issue{background:rgba(248,113,113,0.15);color:var(--red)}
+.delivery-list{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:9px;padding-bottom:calc(var(--safe-bottom)+90px)}
+
+/* 배송 카드 */
+.dc{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:opacity 0.15s}
+.dc:active{opacity:0.75}
+.dc-head{display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer}
+.dc-seq{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:var(--mono);flex-shrink:0}
+.dc-info{flex:1;min-width:0}
+.dc-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-addr{font-size:11px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-sbadge{font-size:11px;font-weight:500;padding:3px 9px;border-radius:20px;white-space:nowrap;flex-shrink:0}
+.dc-meta{display:flex;align-items:center;gap:6px;padding:0 13px 10px;flex-wrap:wrap;cursor:pointer}
+.dc-tag{font-size:10px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:var(--mono)}
+.dc-dist{font-size:10px;color:var(--accent);font-family:var(--mono)}
+.dc-drag-area{display:flex;align-items:center;gap:8px;padding:0 13px 8px}
+.drag-grip{font-size:18px;color:var(--text3);cursor:grab;opacity:0.4;padding:2px 4px;touch-action:none}
+
+/* 상태 색 */
+.s접수대기,.s배차완료{background:rgba(79,142,247,0.12);color:var(--accent)}
+.s픽업{background:rgba(251,191,36,0.12);color:var(--amber)}
+.s배송중{background:rgba(167,139,250,0.12);color:var(--purple)}
+.s완료{background:rgba(52,211,153,0.12);color:var(--green)}
+.s이슈{background:rgba(248,113,113,0.12);color:var(--red)}
+
+.empty-list{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text3)}
+
+/* 하단 버튼 */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;padding:10px 14px calc(var(--safe-bottom)+10px);background:var(--bg2);border-top:1px solid var(--border);display:flex;flex-direction:column;gap:8px}
+.ab{width:100%;padding:15px;border-radius:13px;font-size:15px;font-weight:600;font-family:var(--font);border:none;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.ab:active{opacity:0.75;transform:scale(0.99)}
+.ab:disabled{opacity:0.3;cursor:not-allowed}
+.ab-pickup{background:var(--amber);color:#000}
+.ab-start{background:var(--purple);color:#fff}
+.ab-complete{background:var(--green);color:#000}
+.ab-issue{background:rgba(248,113,113,0.15);color:var(--red);border:1px solid rgba(248,113,113,0.3);padding:10px}
+
+/* ===== 배송 상세 ===== */
+.detail-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;padding-bottom:calc(var(--safe-bottom)+130px)}
+
+/* 다음 배송지 안내 배너 */
+.next-delivery-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(79,142,247,0.08);border-bottom:1px solid rgba(79,142,247,0.2);flex-shrink:0;cursor:pointer}
+.next-delivery-bar:active{opacity:0.8}
+.ndb-label{font-size:10px;color:var(--accent);font-weight:600;flex-shrink:0}
+.ndb-name{font-size:13px;font-weight:600;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ndb-dist{font-size:11px;color:var(--text3);font-family:var(--mono);flex-shrink:0}
+.ndb-arrow{font-size:16px;color:var(--accent);flex-shrink:0}
+
+/* 지도 섹션 - 항상 표시 */
+.map-section{flex-shrink:0;position:relative}
+.map-container{height:240px;position:relative;overflow:hidden;background:var(--bg3)}
+#detail-map{width:100%;height:100%}
+.map-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:var(--bg3);color:var(--text3);font-size:13px}
+.map-actions{display:flex;gap:8px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border)}
+.map-btn{flex:1;padding:12px 8px;border-radius:10px;font-size:13px;font-weight:600;font-family:var(--font);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all 0.15s}
+.map-btn:active{opacity:0.75;transform:scale(0.98)}
+.mb-kakao{background:#FEE500;color:#000}
+.mb-tmap{background:#1E6CFF;color:#fff}
+.mb-navi{background:rgba(79,142,247,0.15);color:var(--accent);border:1px solid rgba(79,142,247,0.3)}
+
+/* 배송지 정보 */
+.dsec{background:var(--bg2);border-bottom:1px solid var(--border)}
+.dsec-title{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;padding:12px 14px 0}
+.dsec-body{padding:8px 14px 13px;display:flex;flex-direction:column;gap:7px}
+.ir{display:flex;align-items:flex-start;gap:10px}
+.il{font-size:11px;color:var(--text3);min-width:60px;flex-shrink:0;padding-top:1px}
+.iv{font-size:13px;color:var(--text);flex:1;word-break:break-all}
+.iv.mono{font-family:var(--mono);font-size:12px}
+.order-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.order-item:last-child{border-bottom:none}
+.on{font-family:var(--mono);font-size:11px;color:var(--text3);min-width:76px}
+.osk{font-size:12px;color:var(--text2);flex:1}
+.oq{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text)}
+
+/* POD */
+.pod-photo{width:100%;height:150px;background:var(--bg3);border:2px dashed var(--border2);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;overflow:hidden}
+.pod-photo img{width:100%;height:100%;object-fit:cover}
+.ph-icon{font-size:30px}.ph-txt{font-size:12px;color:var(--text3)}
+.pod-memo{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px;font-family:var(--font);resize:none;outline:none;min-height:72px}
+.pod-memo:focus{border-color:var(--accent)}
+
+/* 이슈 모달 */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;align-items:flex-end;justify-content:center}
+.modal-bg.show{display:flex}
+.modal-sheet{background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:18px 18px calc(var(--safe-bottom)+18px);width:100%;max-width:480px}
+.mhandle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px}
+.mtitle{font-size:16px;font-weight:600;margin-bottom:12px}
+.issue-opts{display:flex;flex-direction:column;gap:7px;margin-bottom:12px}
+.iopt{padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;font-size:14px;cursor:pointer}
+.iopt.sel{border-color:var(--red);background:rgba(248,113,113,0.1);color:var(--red)}
+.imemo{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:13px;font-family:var(--font);resize:none;outline:none;height:72px;margin-bottom:10px}
+.mbtns{display:flex;gap:8px}
+.mcancel{flex:1;padding:13px;background:var(--bg3);border:1px solid var(--border2);border-radius:12px;color:var(--text2);font-size:14px;font-family:var(--font);cursor:pointer}
+.mok{flex:2;padding:13px;background:var(--red);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:600;font-family:var(--font);cursor:pointer}
+
+/* 기사 선택 */
+.drv-drop{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;display:none;align-items:flex-end;justify-content:center}
+.drv-drop.show{display:flex}
+.drv-sheet{background:var(--bg2);border:1px solid var(--border2);border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:70vh;display:flex;flex-direction:column;padding-bottom:calc(var(--safe-bottom)+6px)}
+.drv-sh-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.drv-list{overflow-y:auto;flex:1}
+.drv-item{display:flex;align-items:center;gap:12px;padding:13px 18px;border-bottom:1px solid var(--border);cursor:pointer}
+.drv-item:active{background:var(--bg3)}
+.drv-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* 토스트 */
+.toast-wrap{position:fixed;top:calc(var(--safe-top)+56px);left:14px;right:14px;display:flex;flex-direction:column;gap:7px;z-index:1000;pointer-events:none}
+.toast{padding:11px 15px;border-radius:12px;font-size:13px;text-align:center;animation:toastIn 0.2s ease;border:1px solid var(--border2)}
+.toast-success{background:rgba(52,211,153,0.92);color:#000;font-weight:500}
+.toast-error{background:rgba(248,113,113,0.92);color:#fff;font-weight:500}
+.toast-info{background:rgba(79,142,247,0.92);color:#fff}
+@keyframes toastIn{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}
+.loading-full{position:fixed;inset:0;background:rgba(15,17,23,0.9);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.loading-full.show{display:flex}
+.spinner{width:34px;height:34px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite}
+.lmsg{font-size:13px;color:var(--text2);font-family:var(--mono)}
+@keyframes spin{to{transform:rotate(360deg)}}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- 로그인 -->
+<div class="screen active" id="screen-login">
+  <div class="login-wrap">
+    <div style="text-align:center">
+      <div class="login-logo-title">🚚 YJDC TMS</div>
+      <div class="login-logo-sub">배송 기사 앱</div>
+    </div>
+    <div class="login-card">
+      <div>
+        <div class="lbl">기사 선택</div>
+        <button class="drv-sel-btn" onclick="openDrvSheet()">
+          <span id="sel-drv-name" class="placeholder">기사 이름을 선택하세요</span>
+          <span style="color:var(--text3)">▾</span>
+        </button>
+      </div>
+      <div>
+        <div class="lbl">PIN 번호</div>
+        <div class="pin-dots" id="pin-dots">
+          <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
+          <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
+        </div>
+        <div class="pin-pad">
+          <button class="pin-btn" onclick="pinIn('1')">1</button>
+          <button class="pin-btn" onclick="pinIn('2')">2</button>
+          <button class="pin-btn" onclick="pinIn('3')">3</button>
+          <button class="pin-btn" onclick="pinIn('4')">4</button>
+          <button class="pin-btn" onclick="pinIn('5')">5</button>
+          <button class="pin-btn" onclick="pinIn('6')">6</button>
+          <button class="pin-btn" onclick="pinIn('7')">7</button>
+          <button class="pin-btn" onclick="pinIn('8')">8</button>
+          <button class="pin-btn" onclick="pinIn('9')">9</button>
+          <button class="pin-btn empty"></button>
+          <button class="pin-btn" onclick="pinIn('0')">0</button>
+          <button class="pin-btn del" onclick="pinDel()">⌫</button>
+        </div>
+      </div>
+      <div class="login-err" id="login-err">PIN 번호가 올바르지 않습니다</div>
+      <button class="login-btn" id="login-btn" onclick="doLogin()" disabled>로그인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 배송 목록 -->
+<div class="screen" id="screen-list">
+  <div class="app-header">
+    <div style="flex:1">
+      <div class="header-title" id="list-drv">기사명</div>
+      <div class="header-sub" id="list-date">—</div>
+    </div>
+    <div class="icon-btn" onclick="loadDeliveries()" title="새로고침">↻</div>
+    <div class="icon-btn" onclick="doLogout()" title="로그아웃">⎋</div>
+  </div>
+  <div class="route-summary" id="route-summary" style="display:none">
+    <div class="rs-chip"><span class="icon">📍</span><span class="val" id="rs-km">—</span><span class="unit">km</span></div>
+    <div class="rs-chip"><span class="icon">⏱</span><span class="val" id="rs-time">—</span><span class="unit">시간 예상</span></div>
+    <div class="rs-chip"><span class="icon">⛽</span><span class="val" id="rs-fuel">—</span><span class="unit">원</span></div>
+    <div class="rs-chip"><span class="icon">🏁</span><span class="val" id="rs-remain">—</span><span class="unit">곳 남음</span></div>
+  </div>
+  <div class="stat-bar">
+    <span class="stat-pill s-total">전체 <b id="st-total">0</b></span>
+    <span class="stat-pill s-pending">대기 <b id="st-pending">0</b></span>
+    <span class="stat-pill s-done">완료 <b id="st-done">0</b></span>
+    <span class="stat-pill s-issue">이슈 <b id="st-issue">0</b></span>
+  </div>
+  <div class="delivery-list" id="delivery-list"></div>
+  <div class="bottom-bar" id="list-bottom" style="display:none">
+    <button class="ab" id="save-order-btn" onclick="saveDeliveryOrder()" style="display:none;background:rgba(79,142,247,0.2);color:var(--accent);border:1px solid rgba(79,142,247,0.3)">💾 변경된 순서 저장</button>
+    <button class="ab ab-pickup" id="pickup-all-btn" onclick="pickupAll()" style="display:none">📦 전체 픽업 확인</button>
+  </div>
+</div>
+
+<!-- 배송 상세 -->
+<div class="screen" id="screen-detail">
+  <div class="app-header">
+    <div class="icon-btn" onclick="goBack()">←</div>
+    <div style="flex:1;text-align:center">
+      <div class="header-title" id="dt-name">—</div>
+      <div class="header-sub" id="dt-seq">— / —</div>
+    </div>
+    <div class="icon-btn" id="dt-status-badge" style="width:auto;padding:0 10px;font-size:12px;border-radius:20px">—</div>
+  </div>
+
+  <div class="detail-body" id="detail-body">
+    <!-- 다음 배송지 안내 -->
+    <div class="next-delivery-bar" id="next-bar" style="display:none" onclick="goNextDelivery()">
+      <span class="ndb-label">다음</span>
+      <span class="ndb-name" id="next-name">—</span>
+      <span class="ndb-dist" id="next-dist">—</span>
+      <span class="ndb-arrow">→</span>
+    </div>
+
+    <!-- 지도 (항상 표시) -->
+    <div class="map-section">
+      <div class="map-container">
+        <div id="detail-map"></div>
+        <div class="map-loading" id="map-loading">
+          <div class="spinner" style="width:24px;height:24px;border-width:2px"></div>
+          <span>지도 로딩 중...</span>
+        </div>
+      </div>
+      <div class="map-actions">
+        <button class="map-btn mb-kakao" onclick="openKakaoMap()">
+          <span>🗺</span> 카카오맵
+        </button>
+        <button class="map-btn mb-tmap" onclick="openTmap()">
+          <span>🚗</span> T맵 내비
+        </button>
+        <button class="map-btn mb-navi" onclick="openKakaoNavi()">
+          <span>📡</span> 카카오내비
+        </button>
+      </div>
+    </div>
+
+    <!-- 배송지 정보 -->
+    <div class="dsec">
+      <div class="dsec-title">배송지 정보</div>
+      <div class="dsec-body">
+        <div class="ir"><span class="il">업체명</span><span class="iv" id="dt-bname">—</span></div>
+        <div class="ir"><span class="il">주소</span>
+          <span class="iv" id="dt-addr" style="cursor:pointer;color:var(--accent)" onclick="copyAddr()">— <span style="font-size:10px;opacity:0.6">(탭하여 복사)</span></span>
+        </div>
+        <div class="ir"><span class="il">ST 코드</span><span class="iv mono" id="dt-stcode">—</span></div>
+        <div class="ir"><span class="il">구간 거리</span><span class="iv mono" id="dt-dist" style="color:var(--accent)">—</span></div>
+      </div>
+    </div>
+
+    <!-- 오더 목록 -->
+    <div class="dsec">
+      <div class="dsec-title">오더 목록</div>
+      <div class="dsec-body" id="dt-orders"></div>
+    </div>
+
+    <!-- POD (배송중일 때) -->
+    <div class="dsec" id="pod-sec" style="display:none">
+      <div class="dsec-title">배송 완료 확인 (POD)</div>
+      <div class="dsec-body" style="gap:10px">
+        <div class="pod-photo" id="pod-photo" onclick="document.getElementById('pod-file').click()">
+          <div class="ph-icon">📷</div>
+          <div class="ph-txt">사진 촬영 (선택)</div>
+        </div>
+        <input type="file" id="pod-file" accept="image/*" capture="environment" onchange="onPhoto(this)" style="display:none">
+        <textarea class="pod-memo" id="pod-memo" placeholder="메모 (서명자명, 특이사항 등)"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar" id="detail-actions"></div>
+</div>
+
+<!-- 기사 선택 시트 -->
+<div class="drv-drop" id="drv-drop">
+  <div class="drv-sheet">
+    <div class="drv-sh-head">
+      <span style="font-size:15px;font-weight:600">기사 선택</span>
+      <span style="font-size:20px;color:var(--text3);cursor:pointer" onclick="closeDrvSheet()">✕</span>
+    </div>
+    <div class="drv-list" id="drv-list"></div>
+  </div>
+</div>
+
+<!-- 이슈 모달 -->
+<div class="modal-bg" id="issue-modal">
+  <div class="modal-sheet">
+    <div class="mhandle"></div>
+    <div class="mtitle">⚠️ 이슈 등록</div>
+    <div class="issue-opts">
+      <div class="iopt" onclick="selIssue(this,'부재중')">부재중 (담당자 없음)</div>
+      <div class="iopt" onclick="selIssue(this,'배송거부')">배송 거부</div>
+      <div class="iopt" onclick="selIssue(this,'주소불명')">주소 불명확</div>
+      <div class="iopt" onclick="selIssue(this,'파손')">상품 파손</div>
+      <div class="iopt" onclick="selIssue(this,'기타')">기타</div>
+    </div>
+    <textarea class="imemo" id="issue-memo" placeholder="상세 내용..."></textarea>
+    <div class="mbtns">
+      <button class="mcancel" onclick="closeIssueModal()">취소</button>
+      <button class="mok" onclick="submitIssue()">이슈 등록</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading-full" id="loading"><div class="spinner"></div><div class="lmsg" id="lmsg">로딩 중...</div></div>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+// ===== GPS 위치 전송 =====
+let gpsInterval=null;
+
+function startGpsTracking(){
+  if(!navigator.geolocation||!curDriver) return;
+  // 즉시 1회 전송
+  sendGpsLocation();
+  // 60초마다 전송
+  if(gpsInterval) clearInterval(gpsInterval);
+  gpsInterval=setInterval(sendGpsLocation, 60000);
+}
+
+function stopGpsTracking(){
+  if(gpsInterval){clearInterval(gpsInterval);gpsInterval=null;}
+}
+
+async function sendGpsLocation(){
+  if(!curDriver||!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    try{
+      const now=new Date().toISOString();
+      const today=now.slice(0,10);
+      // driver_locations 테이블에 upsert
+      await sb('POST','driver_locations',{
+        driver_name:curDriver.name,
+        delivery_date:today,
+        lat:pos.coords.latitude,
+        lng:pos.coords.longitude,
+        accuracy:Math.round(pos.coords.accuracy),
+        updated_at:now,
+        status:getMyCurrentStatus()
+      },'resolution=merge-duplicates,return=minimal');
+    }catch(e){console.warn('GPS 전송 실패',e);}
+  },{timeout:5000,maximumAge:30000,enableHighAccuracy:false});
+}
+
+function getMyCurrentStatus(){
+  // 현재 진행 중인 배송 상태 반환
+  const active=deliveries.find(d=>['배송중','픽업'].includes(d.status));
+  if(active) return active.status;
+  const allDone=deliveries.length&&deliveries.every(d=>['완료','이슈'].includes(d.status));
+  if(allDone) return '업무완료';
+  return '대기중';
+}
+
+const SB_URL='https://ctqozzdfesypfwtecgbm.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0cW96emRmZXN5cGZ3dGVjZ2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMTI3NjQsImV4cCI6MjA5MTU4ODc2NH0.JW-uGdHsPivOejkhBIJNImKej4FRIE5FZVWz3Glln4o';
+const KAKAO_KEY='781a3c294cf521fb49a72736283d31d5';
+const DEPOT={lat:37.4901,lng:126.4884};
+const DRV_COLORS=['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c','#e879f9'];
+
+const sb=async(m,p,b,pref='return=minimal')=>{
+  const h={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'};
+  if(pref)h['Prefer']=pref;
+  const r=await fetch(`${SB_URL}/rest/v1/${p}`,{method:m,headers:h,body:b?JSON.stringify(b):undefined});
+  if(!r.ok)throw new Error(await r.text());
+  return r.status!==204?r.json():null;
+};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function drvColor(n){let h=0;for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))&0xffffffff;return DRV_COLORS[Math.abs(h)%DRV_COLORS.length];}
+function haversine(a,b,c,d){if(!a||!b||!c||!d)return 10;const R=6371,rad=x=>x*Math.PI/180,dL=rad(c-a),dG=rad(d-b),x=Math.sin(dL/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(dG/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+
+// 상태
+let curDriver=null,driversList=[],deliveries=[],allOrders=[];
+let curDelivery=null,selPin='',podPhoto=null,selIssueType='';
+let kakaoMap=null,kakaoGeocoder=null,dragIdx=null;
+let driverFuelEff=10,driverFuelPrice=1650;
+
+// ===== INIT =====
+window.addEventListener('load',async()=>{
+  const saved=localStorage.getItem('yjdc_drv');
+  if(saved){
+    try{
+      curDriver=JSON.parse(saved);
+      driverFuelEff=curDriver.fuel_efficiency||10;
+      driverFuelPrice=curDriver.fuel_price_per_liter||1650;
+      showScreen('screen-list');
+      await loadDeliveries();
+      return;
+    }catch(e){localStorage.removeItem('yjdc_drv');}
+  }
+  loadDrvList();
+  // Kakao 지오코더 초기화
+  if(typeof kakao!=='undefined') kakaoGeocoder=new kakao.maps.services.Geocoder();
+});
+
+// ===== 기사 목록 =====
+async function loadDrvList(){
+  try{driversList=await sb('GET','drivers?select=name,phone,region,fuel_efficiency,fuel_price_per_liter&order=name');}
+  catch(e){}
+}
+function openDrvSheet(){
+  document.getElementById('drv-list').innerHTML=driversList.length
+    ?driversList.map(d=>`<div class="drv-item" onclick="selDrv('${d.name}')">
+        <span class="drv-dot" style="background:${drvColor(d.name)}"></span>
+        <div><div style="font-size:15px;font-weight:500">${d.name}</div>
+        <div style="font-size:11px;color:var(--text3)">${d.region||d.phone||''}</div></div>
+      </div>`).join('')
+    :'<div style="padding:24px;text-align:center;color:var(--text3)">기사 없음</div>';
+  document.getElementById('drv-drop').classList.add('show');
+}
+function closeDrvSheet(){document.getElementById('drv-drop').classList.remove('show');}
+function selDrv(name){
+  const d=driversList.find(x=>x.name===name)||{name};
+  curDriver={...d};
+  driverFuelEff=d.fuel_efficiency||10;
+  driverFuelPrice=d.fuel_price_per_liter||1650;
+  document.getElementById('sel-drv-name').textContent=name;
+  document.getElementById('sel-drv-name').classList.remove('placeholder');
+  closeDrvSheet();updateLoginBtn();
+}
+
+// ===== PIN =====
+function pinIn(n){if(selPin.length>=4)return;selPin+=n;updatePinDots();if(selPin.length===4)updateLoginBtn();}
+function pinDel(){selPin=selPin.slice(0,-1);updatePinDots();updateLoginBtn();}
+function updatePinDots(){for(let i=0;i<4;i++)document.getElementById('pd'+i).classList.toggle('filled',i<selPin.length);}
+function updateLoginBtn(){document.getElementById('login-btn').disabled=!curDriver||selPin.length!==4;}
+
+// ===== 로그인 =====
+async function doLogin(){
+  if(!curDriver||selPin.length!==4)return;
+  showLoading('로그인 중...');
+  try{
+    const res=await sb('GET',`drivers?name=eq.${encodeURIComponent(curDriver.name)}&select=*`);
+    if(!res?.length){hideLoading();showToast('error','기사 정보 없음');return;}
+    const drv=res[0];
+    if(selPin!==(drv.pin||'0000')){
+      hideLoading();document.getElementById('login-err').style.display='block';
+      selPin='';updatePinDots();return;
+    }
+    document.getElementById('login-err').style.display='none';
+    curDriver={...curDriver,...drv};
+    driverFuelEff=drv.fuel_efficiency||10;
+    driverFuelPrice=drv.fuel_price_per_liter||1650;
+    localStorage.setItem('yjdc_drv',JSON.stringify(curDriver));
+    if(typeof kakao!=='undefined') kakaoGeocoder=new kakao.maps.services.Geocoder();
+    hideLoading();showScreen('screen-list');await loadDeliveries();
+    startGpsTracking(); // 로그인 후 GPS 추적 시작
+  }catch(e){hideLoading();showToast('error','로그인 실패: '+e.message);}
+}
+function doLogout(){
+  if(!confirm('로그아웃 하시겠습니까?'))return;
+  localStorage.removeItem('yjdc_drv');
+  curDriver=null;selPin='';
+  document.getElementById('sel-drv-name').textContent='기사 이름을 선택하세요';
+  document.getElementById('sel-drv-name').classList.add('placeholder');
+  updatePinDots();updateLoginBtn();
+  showScreen('screen-login');loadDrvList();
+}
+
+// ===== 배송 목록 로드 =====
+async function loadDeliveries(){
+  showLoading('배송 목록 로드 중...');
+  try{
+    const dateRes=await sb('GET','orders?select=delivery_date&order=delivery_date.desc&limit=1');
+    if(!dateRes?.length){hideLoading();renderEmpty();return;}
+    const today=dateRes[0].delivery_date;
+    document.getElementById('list-date').textContent=today+' 출고';
+    document.getElementById('list-drv').textContent=curDriver.name;
+
+    allOrders=await sb('GET',`orders?delivery_date=eq.${today}&driver_name=eq.${encodeURIComponent(curDriver.name)}&select=*&order=ship_to_code,order_number&limit=500`);
+    if(!allOrders?.length){hideLoading();renderEmpty();return;}
+
+    deliveries=groupByST(allOrders);
+
+    // 경로 순서 적용
+    const routes=await sb('GET',`delivery_routes?delivery_date=eq.${today}&driver_name=eq.${encodeURIComponent(curDriver.name)}&select=*&order=visit_order`).catch(()=>[]);
+    if(routes?.length){
+      const rm={};routes.forEach(r=>{rm[r.ship_to_code]=r.visit_order;});
+      deliveries.sort((a,b)=>(rm[a.stCode]||99)-(rm[b.stCode]||99));
+      // 저장된 좌표 복원
+      routes.forEach(r=>{
+        const d=deliveries.find(x=>x.stCode===r.ship_to_code);
+        if(d&&r.lat&&r.lng){d.lat=r.lat;d.lng=r.lng;}
+      });
+    }
+    deliveries.forEach((d,i)=>d.seq=i+1);
+
+    // 백그라운드 지오코딩 + 거리 계산
+    hideLoading();
+    renderList();
+    calcRouteDists(); // 비동기로 진행
+  }catch(e){hideLoading();showToast('error','로드 실패: '+e.message);}
+}
+
+function groupByST(orders){
+  const map={};
+  const sp=['이슈','배송중','픽업','배차완료','접수대기'];
+  orders.forEach(o=>{
+    const k=o.ship_to_code||(o.ship_to_name||o.id);
+    if(!map[k])map[k]={stCode:o.ship_to_code||'',name:(o.ship_to_name||'').replace(/-725|-WB-725/g,'').trim(),address:o.address||'',orders:[],ids:[],status:o.status,lat:null,lng:null,distFromPrev:0,cumDist:0};
+    map[k].orders.push(o);map[k].ids.push(o.id);
+    if(sp.indexOf(o.status)<sp.indexOf(map[k].status))map[k].status=o.status;
+  });
+  return Object.values(map);
+}
+
+// ===== 지오코딩 =====
+async function geocode(addr){
+  return new Promise(resolve=>{
+    if(!kakaoGeocoder){resolve({lat:null,lng:null});return;}
+    const clean=addr.replace(/\(.*?\)/g,'').replace(/\s+\d{2,3}[-.\s]\d{3,4}[-.\s]\d{4}.*/,'').trim().substring(0,60);
+    kakaoGeocoder.addressSearch(clean,(res,st)=>{
+      if(st===kakao.maps.services.Status.OK&&res.length){
+        resolve({lat:parseFloat(res[0].y),lng:parseFloat(res[0].x)});
+      } else {
+        // 키워드 검색 fallback
+        const ps=new kakao.maps.services.Places();
+        ps.keywordSearch(clean,(r2,s2)=>{
+          if(s2===kakao.maps.services.Status.OK&&r2.length)
+            resolve({lat:parseFloat(r2[0].y),lng:parseFloat(r2[0].x)});
+          else resolve({lat:null,lng:null});
+        });
+      }
+    });
+  });
+}
+
+async function calcRouteDists(){
+  // 1차: 현재 좌표로 즉시 계산
+  calcDists();
+  updateRouteSummary();
+  renderList();
+
+  // 2차: 좌표 없는 항목 지오코딩
+  const missing=deliveries.filter(d=>!d.lat||!d.lng);
+  if(!missing.length) return;
+
+  for(const d of missing){
+    const c=await geocode(d.address);
+    if(c.lat&&c.lng){d.lat=c.lat;d.lng=c.lng;}
+    await sleep(80);
+  }
+  // 재계산
+  calcDists();
+  updateRouteSummary();
+  renderList();
+}
+
+function updateRouteSummary(){
+  if(!deliveries.length){document.getElementById('route-summary').style.display='none';return;}
+  const pending=deliveries.filter(d=>!['완료','이슈'].includes(d.status));
+  const totalKm=deliveries[deliveries.length-1]?.cumDist||0;          // 전체 누적
+  const pendingKm=pending.reduce((s,d)=>s+d.distFromPrev,0);         // 남은 거리
+  const estTime=(pendingKm/30+pending.length*0.15).toFixed(1);        // 평균 30km/h
+  const fuelCost=Math.round(pendingKm/driverFuelEff*driverFuelPrice); // 남은 주유비
+  document.getElementById('rs-km').textContent=Math.round(totalKm);
+  document.getElementById('rs-time').textContent=estTime;
+  document.getElementById('rs-fuel').textContent=fuelCost.toLocaleString();
+  document.getElementById('rs-remain').textContent=pending.length;
+  document.getElementById('route-summary').style.display='flex';
+}
+
+// ===== 배송 목록 렌더 =====
+function renderList(){
+  const total=deliveries.length;
+  const done=deliveries.filter(d=>d.status==='완료').length;
+  const pending=deliveries.filter(d=>['배차완료','픽업','배송중'].includes(d.status)).length;
+  const issue=deliveries.filter(d=>d.status==='이슈').length;
+  document.getElementById('st-total').textContent=total;
+  document.getElementById('st-done').textContent=done;
+  document.getElementById('st-pending').textContent=pending;
+  document.getElementById('st-issue').textContent=issue;
+
+  if(!deliveries.length){renderEmpty();return;}
+  const list=document.getElementById('delivery-list');
+  list.innerHTML=deliveries.map(d=>{
+    const sc=statusColor(d.status);
+    const isDone=d.status==='완료';
+    const qty=d.orders.reduce((s,o)=>s+(parseInt(o.qty)||0),0);
+    const distTxt=d.distFromPrev>0?`+${d.distFromPrev.toFixed(1)}km`:'';
+    const cumTxt=d.cumDist>0?`누적 ${d.cumDist.toFixed(1)}km`:'';
+    return`<div class="dc" id="dc-${d.seq}" draggable="true"
+      ondragstart="onDragStart(event,${d.seq-1})"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave(event)"
+      ondrop="onDrop(event,${d.seq-1})" ondragend="onDragEnd(event)"
+      style="opacity:${isDone?0.5:1}">
+      <div class="dc-head" onclick="openDelivery('${escKey(d.stCode||d.name)}')">
+        <div class="dc-seq" style="background:${sc}22;color:${sc};border:1px solid ${sc}44">${d.seq}</div>
+        <div class="dc-info">
+          <div class="dc-name">${d.name||'—'}</div>
+          <div class="dc-addr">${d.address.substring(0,32)}${d.address.length>32?'...':''}</div>
+        </div>
+        <span class="dc-sbadge s${d.status}">${d.status}</span>
+      </div>
+      <div class="dc-meta" onclick="openDelivery('${escKey(d.stCode||d.name)}')">
+        ${d.stCode?`<span class="dc-tag">${d.stCode}</span>`:''}
+        <span class="dc-tag">${d.orders.length}라인·${qty}개</span>
+        ${distTxt?`<span class="dc-dist">${distTxt} (${cumTxt})</span>`:''}
+      </div>
+      <div class="dc-drag-area">
+        <span class="drag-grip" onclick="event.stopPropagation()">⠿⠿</span>
+        <span style="font-size:10px;color:var(--text3)">드래그하여 순서 변경</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const hasConfirmed=deliveries.some(d=>d.status==='배차완료');
+  const listBottom=document.getElementById('list-bottom');
+  const pickupBtn=document.getElementById('pickup-all-btn');
+  const saveBtn=document.getElementById('save-order-btn');
+  listBottom.style.display=deliveries.length?'flex':'none';
+  if(pickupBtn) pickupBtn.style.display=hasConfirmed?'flex':'none';
+  if(saveBtn) saveBtn.style.display='none';
+}
+
+function renderEmpty(){
+  document.getElementById('delivery-list').innerHTML=`<div class="empty-list"><div style="font-size:48px">📭</div><p style="font-size:14px;color:var(--text2)">오늘 배정된 배송이 없습니다</p></div>`;
+  ['st-total','st-done','st-pending','st-issue'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('route-summary').style.display='none';
+  document.getElementById('list-bottom').style.display='none';
+}
+
+function escKey(k){return(k||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function statusColor(s){return{'배차완료':'#4f8ef7','픽업':'#fbbf24','배송중':'#a78bfa','완료':'#34d399','이슈':'#f87171'}[s]||'#555a6e';}
+function statusLabel(s){return{'배차완료':'배차완료','픽업':'픽업완료','배송중':'배송중','완료':'✅ 완료','이슈':'⚠️ 이슈','접수대기':'대기'}[s]||s;}
+
+// ===== 드래그 순서변경 =====
+function onDragStart(e,idx){dragIdx=idx;e.dataTransfer.effectAllowed='move';setTimeout(()=>e.target.classList.add('dragging'),0);}
+function onDragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';e.currentTarget.classList.add('drag-over');}
+function onDragLeave(e){e.currentTarget.classList.remove('drag-over');}
+function onDragEnd(e){e.target.classList.remove('dragging');}
+function onDrop(e,toIdx){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over');
+  if(dragIdx===null||dragIdx===toIdx)return;
+  const moved=deliveries.splice(dragIdx,1)[0];
+  deliveries.splice(toIdx,0,moved);
+  deliveries.forEach((d,i)=>d.seq=i+1);
+  dragIdx=null;
+  recalcAndRender();
+  document.getElementById('save-order-btn').style.display='flex';
+  showToast('info','순서가 변경되었습니다');
+}
+
+// 거리 재계산 + 화면 업데이트 (좌표 없는 항목은 지오코딩 후 재계산)
+async function recalcAndRender(){
+  // 1차: 현재 좌표로 즉시 계산 (화면 바로 업데이트)
+  calcDists();
+  renderList();
+  updateRouteSummary();
+
+  // 2차: 좌표 없는 항목 지오코딩 후 재계산
+  const missing = deliveries.filter(d=>!d.lat||!d.lng);
+  if(missing.length){
+    for(const d of missing){
+      const c=await geocode(d.address);
+      if(c.lat&&c.lng){d.lat=c.lat;d.lng=c.lng;}
+      await sleep(80);
+    }
+    // 재계산
+    calcDists();
+    renderList();
+    updateRouteSummary();
+  }
+}
+
+// 순수 거리 계산 (동기)
+function calcDists(){
+  let prev={...DEPOT},cum=0;
+  deliveries.forEach(d=>{
+    const dist=haversine(prev.lat,prev.lng,d.lat||DEPOT.lat,d.lng||DEPOT.lng)*1.3;
+    d.distFromPrev=dist;cum+=dist;d.cumDist=cum;
+    prev=d;
+  });
+}
+async function saveDeliveryOrder(){
+  showLoading('순서 저장 중...');
+  try{
+    const dateRes=await sb('GET','orders?select=delivery_date&order=delivery_date.desc&limit=1');
+    const today=dateRes[0].delivery_date;
+    for(let i=0;i<deliveries.length;i++){
+      const d=deliveries[i];
+      if(!d.stCode)continue;
+      await sb('PATCH',`delivery_routes?delivery_date=eq.${today}&driver_name=eq.${encodeURIComponent(curDriver.name)}&ship_to_code=eq.${encodeURIComponent(d.stCode)}`,
+        {visit_order:i+1,dist_from_prev_km:parseFloat(d.distFromPrev.toFixed(2)),total_km_cumulative:parseFloat(d.cumDist.toFixed(2))});
+    }
+    hideLoading();document.getElementById('save-order-btn').style.display='none';
+    showToast('success','✅ 순서 저장 완료');
+  }catch(e){hideLoading();showToast('error','저장 실패: '+e.message);}
+}
+
+// ===== 전체 픽업 =====
+async function pickupAll(){
+  const tgts=deliveries.filter(d=>d.status==='배차완료');
+  if(!tgts.length)return;
+  showLoading('픽업 처리 중...');
+  try{
+    for(let i=0;i<tgts.length;i++){
+      for(const id of tgts[i].ids)await sb('PATCH',`orders?id=eq.${id}`,{status:'픽업',picked_at:new Date().toISOString()});
+      tgts[i].status='픽업';tgts[i].orders.forEach(o=>o.status='픽업');
+      document.getElementById('lmsg').textContent=`픽업 처리 중... (${i+1}/${tgts.length})`;
+    }
+    hideLoading();showToast('success',`✅ ${tgts.length}곳 픽업 완료`);renderList();
+  }catch(e){hideLoading();showToast('error','실패: '+e.message);}
+}
+
+// ===== 배송 상세 열기 =====
+function openDelivery(key){
+  const d=deliveries.find(x=>(x.stCode||x.name)===key);
+  if(!d)return;
+  curDelivery=d;
+  kakaoMap=null;
+
+  document.getElementById('dt-name').textContent=d.name||'—';
+  document.getElementById('dt-seq').textContent=`${d.seq} / ${deliveries.length}`;
+  document.getElementById('dt-bname').textContent=d.name||'—';
+  document.getElementById('dt-addr').textContent=d.address||'—';
+  document.getElementById('dt-stcode').textContent=d.stCode||'—';
+  document.getElementById('dt-dist').textContent=d.distFromPrev>0
+    ?`이전 배송지에서 +${d.distFromPrev.toFixed(1)}km (누적 ${d.cumDist.toFixed(1)}km)` : '계산 중...';
+
+  // 상태 뱃지
+  const badge=document.getElementById('dt-status-badge');
+  const sc=statusColor(d.status);
+  badge.textContent=statusLabel(d.status);
+  badge.style.cssText=`width:auto;padding:0 10px;font-size:12px;border-radius:20px;background:${sc}22;color:${sc};border:1px solid ${sc}44;font-weight:600`;
+
+  // 주소 복사 함수
+  window.copyAddr=()=>{
+    navigator.clipboard?.writeText(d.address||'').then(()=>showToast('info','주소 복사됨'));
+  };
+
+  // 오더 목록
+  document.getElementById('dt-orders').innerHTML=d.orders.map(o=>`
+    <div class="order-item">
+      <span class="on">${o.order_number}</span>
+      <span class="osk">${o.sku||o.lot||'—'}</span>
+      <span class="oq">${o.qty||0}개</span>
+    </div>`).join('');
+
+  // POD
+  podPhoto=null;
+  document.getElementById('pod-memo').value='';
+  resetPhoto();
+  document.getElementById('pod-sec').style.display=['픽업','배송중'].includes(d.status)?'block':'none';
+
+  // 다음 배송지 안내
+  const nextD=deliveries.find(x=>x.seq>(d.seq||0)&&!['완료','이슈'].includes(x.status));
+  const nextBar=document.getElementById('next-bar');
+  if(nextD&&nextBar){
+    nextBar.style.display='flex';
+    document.getElementById('next-name').textContent=nextD.name||'—';
+    document.getElementById('next-dist').textContent=nextD.distFromPrev>0?`+${nextD.distFromPrev.toFixed(1)}km`:'';
+    window.goNextDelivery=()=>openDelivery(nextD.stCode||nextD.name);
+  } else if(nextBar){
+    nextBar.style.display='none';
+  }
+
+  // 지도 초기화
+  document.getElementById('map-loading').style.display='flex';
+  showScreen('screen-detail');
+  renderDetailActions(d.status);
+
+  // 지도 렌더 (딜레이 후)
+  setTimeout(()=>initDetailMap(d), 300);
+}
+
+// ===== 카카오 지도 =====
+function initDetailMap(d){
+  if(typeof kakao==='undefined'){
+    document.getElementById('map-loading').style.display='none';
+    document.getElementById('map-loading').innerHTML='<span style="font-size:12px;color:var(--text3)">지도를 사용하려면 인터넷 연결이 필요합니다</span>';
+    return;
+  }
+  const container=document.getElementById('detail-map');
+  const defaultPos=new kakao.maps.LatLng(37.5665,126.978);
+  kakaoMap=new kakao.maps.Map(container,{center:defaultPos,level:4});
+
+  const setMarker=(lat,lng)=>{
+    const pos=new kakao.maps.LatLng(lat,lng);
+    kakaoMap.setCenter(pos);
+    kakaoMap.setLevel(3);
+    new kakao.maps.Marker({position:pos,map:kakaoMap});
+    // 출발지(현재 위치) 마커
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(p=>{
+        const myPos=new kakao.maps.LatLng(p.coords.latitude,p.coords.longitude);
+        new kakao.maps.Marker({position:myPos,map:kakaoMap,
+          image:new kakao.maps.MarkerImage('https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/myLocation.png',new kakao.maps.Size(22,26))});
+      },()=>{});
+    }
+    document.getElementById('map-loading').style.display='none';
+    // 지오코딩 성공 시 curDelivery에 좌표 저장
+    if(!curDelivery.lat){curDelivery.lat=lat;curDelivery.lng=lng;}
+  };
+
+  if(d.lat&&d.lng){
+    setMarker(d.lat,d.lng);
+  } else {
+    // 지오코딩
+    if(!kakaoGeocoder) kakaoGeocoder=new kakao.maps.services.Geocoder();
+    const clean=d.address.replace(/\(.*?\)/g,'').trim().substring(0,60);
+    kakaoGeocoder.addressSearch(clean,(res,st)=>{
+      if(st===kakao.maps.services.Status.OK&&res.length){
+        const lat=parseFloat(res[0].y),lng=parseFloat(res[0].x);
+        d.lat=lat;d.lng=lng;
+        setMarker(lat,lng);
+      } else {
+        const ps=new kakao.maps.services.Places();
+        ps.keywordSearch(clean,(r2,s2)=>{
+          if(s2===kakao.maps.services.Status.OK&&r2.length){
+            const lat=parseFloat(r2[0].y),lng=parseFloat(r2[0].x);
+            d.lat=lat;d.lng=lng;
+            setMarker(lat,lng);
+          } else {
+            document.getElementById('map-loading').innerHTML='<span style="font-size:12px;color:var(--text3)">위치를 찾을 수 없습니다</span>';
+          }
+        },{location:new kakao.maps.LatLng(37.5,127)});
+      }
+    });
+  }
+}
+
+// ===== 내비게이션 연동 =====
+// ===== 현재 위치 가져오기 (공통) =====
+function getCurrentPos(){
+  return new Promise((resolve)=>{
+    if(!navigator.geolocation){resolve(null);return;}
+    navigator.geolocation.getCurrentPosition(
+      p=>resolve({lat:p.coords.latitude,lng:p.coords.longitude}),
+      ()=>resolve(null),
+      {timeout:3000,maximumAge:10000,enableHighAccuracy:false}
+    );
+  });
+}
+
+// ===== 목적지 좌표 준비 (없으면 지오코딩) =====
+async function ensureDestCoords(){
+  if(curDelivery.lat&&curDelivery.lng) return true;
+  // 좌표 없으면 최대 3초 대기
+  return new Promise(resolve=>{
+    const check=setInterval(()=>{
+      if(curDelivery.lat&&curDelivery.lng){clearInterval(check);resolve(true);}
+    },300);
+    setTimeout(()=>{clearInterval(check);resolve(false);},3000);
+  });
+}
+
+// ===== 카카오맵 (지도 보기) =====
+function openKakaoMap(){
+  if(!curDelivery)return;
+  const name=encodeURIComponent(curDelivery.name);
+  if(curDelivery.lat&&curDelivery.lng){
+    // kakaomap:// 앱 → 실패시 웹 지도
+    const appUrl=`kakaomap://look?p=${curDelivery.lat},${curDelivery.lng}`;
+    const webUrl=`https://map.kakao.com/link/map/${name},${curDelivery.lat},${curDelivery.lng}`;
+    window.location.href=appUrl;
+    setTimeout(()=>window.open(webUrl,'_blank'),600);
+  } else {
+    window.open(`https://map.kakao.com/link/search/${encodeURIComponent(curDelivery.address)}`,'_blank');
+  }
+}
+
+// ===== T맵 내비 (출발지 자동 포함) =====
+async function openTmap(){
+  if(!curDelivery)return;
+  showToast('info','📍 현재 위치 확인 중...');
+
+  const [myPos, destReady] = await Promise.all([getCurrentPos(), ensureDestCoords()]);
+
+  const goalName=encodeURIComponent(curDelivery.name);
+  const goalAddr=encodeURIComponent(curDelivery.address);
+
+  if(destReady && curDelivery.lat && curDelivery.lng){
+    const gx=curDelivery.lng, gy=curDelivery.lat;
+
+    let appUrl, webUrl;
+    if(myPos){
+      // 출발지 + 목적지 모두 포함 → 바로 경로 탐색
+      const sx=myPos.lng, sy=myPos.lat;
+      appUrl=`tmap://route?startname=${encodeURIComponent('현재위치')}&startx=${sx}&starty=${sy}&goalname=${goalName}&goalx=${gx}&goaly=${gy}&reqCoordType=WGS84GEO&resCoordType=WGS84GEO`;
+      webUrl=`https://map.kakao.com/link/from/현재위치,${sy},${sx}/to/${encodeURIComponent(curDelivery.name)},${gy},${gx}`;
+    } else {
+      // 출발지 없이 목적지만 (앱이 알아서 현재위치로)
+      appUrl=`tmap://route?goalname=${goalName}&goalx=${gx}&goaly=${gy}&reqCoordType=WGS84GEO`;
+      webUrl=`https://map.kakao.com/link/to/${goalName},${gy},${gx}`;
+    }
+    window.location.href=appUrl;
+    setTimeout(()=>window.open(webUrl,'_blank'),600);
+  } else {
+    // 좌표 없으면 카카오맵 주소 검색으로 fallback
+    window.open(`https://map.kakao.com/link/search/${goalAddr}`,'_blank');
+    showToast('info','카카오맵으로 연결합니다');
+  }
+}
+
+// ===== 카카오내비 (출발지 자동 포함) =====
+async function openKakaoNavi(){
+  if(!curDelivery)return;
+  showToast('info','📍 현재 위치 확인 중...');
+
+  const [myPos, destReady] = await Promise.all([getCurrentPos(), ensureDestCoords()]);
+
+  const goalName=encodeURIComponent(curDelivery.name);
+
+  if(destReady && curDelivery.lat && curDelivery.lng){
+    const gx=curDelivery.lng, gy=curDelivery.lat;
+
+    let appUrl, webUrl;
+    if(myPos){
+      // 출발지 + 목적지 → 카카오내비 바로 경로
+      const sx=myPos.lng, sy=myPos.lat;
+      appUrl=`kakaonavi://navigate?sp=${sx},${sy}&ep=${gx},${gy}&by=TIME&name=${goalName}`;
+      webUrl=`https://map.kakao.com/link/from/현재위치,${sy},${sx}/to/${encodeURIComponent(curDelivery.name)},${gy},${gx}`;
+    } else {
+      // GPS 실패 → 목적지만 (앱이 현재위치로 자동 설정)
+      appUrl=`kakaonavi://navigate?ep=${gx},${gy}&by=TIME&name=${goalName}`;
+      webUrl=`https://map.kakao.com/link/to/${goalName},${gy},${gx}`;
+    }
+    window.location.href=appUrl;
+    setTimeout(()=>window.open(webUrl,'_blank'),600);
+  } else {
+    // 좌표 없으면 카카오맵 주소 검색
+    window.open(`https://map.kakao.com/link/search/${encodeURIComponent(curDelivery.address)}`,'_blank');
+    showToast('info','카카오맵으로 연결합니다');
+  }
+}
+
+function tryAppLink(appUrl, fallbackUrl){
+  window.location.href=appUrl;
+  setTimeout(()=>window.open(fallbackUrl,'_blank'),600);
+}
+
+// ===== 상태 변경 =====
+function renderDetailActions(status){
+  const el=document.getElementById('detail-actions');
+  let html='';
+  if(['배차완료','접수대기'].includes(status)){
+    html=`<button class="ab ab-pickup" onclick="updStatus('픽업')">📦 픽업 확인</button>`;
+  }else if(status==='픽업'){
+    html=`<button class="ab ab-start" onclick="updStatus('배송중')">🚚 배송 시작</button>
+          <button class="ab ab-issue" onclick="openIssue()">⚠️ 이슈</button>`;
+  }else if(status==='배송중'){
+    document.getElementById('pod-sec').style.display='block';
+    html=`<button class="ab ab-complete" onclick="completeDelivery()">✅ 배송 완료</button>
+          <button class="ab ab-issue" onclick="openIssue()">⚠️ 이슈</button>`;
+  }else if(status==='완료'){
+    html=`<div style="text-align:center;padding:10px;color:var(--green);font-weight:600;font-size:15px">✅ 배송 완료</div>`;
+  }else if(status==='이슈'){
+    html=`<div style="text-align:center;padding:6px;color:var(--red);font-weight:600">⚠️ 이슈 등록됨</div>
+          <button class="ab ab-start" style="background:rgba(79,142,247,0.2);color:var(--accent)" onclick="updStatus('배송중')">↩ 배송 재시도</button>`;
+  }
+  el.innerHTML=html;
+}
+
+async function updStatus(ns){
+  if(!curDelivery)return;
+  showLoading(ns+' 처리 중...');
+  // 배송 시작 시 GPS 추적 시작
+  if(ns==='배송중'||ns==='픽업') startGpsTracking();
+  try{
+    const now=new Date().toISOString();
+    const pd={status:ns};
+    if(ns==='픽업')pd.picked_at=now;
+    if(ns==='배송중')pd.started_at=now;
+    for(const id of curDelivery.ids)await sb('PATCH',`orders?id=eq.${id}`,pd);
+    curDelivery.status=ns;curDelivery.orders.forEach(o=>o.status=ns);
+    deliveries.find(d=>(d.stCode||d.name)===(curDelivery.stCode||curDelivery.name))&&(deliveries.find(d=>(d.stCode||d.name)===(curDelivery.stCode||curDelivery.name)).status=ns);
+    hideLoading();showToast('success',ns+' 처리 완료');
+    renderDetailActions(ns);
+    // 상태 뱃지 업데이트
+    const badge=document.getElementById('dt-status-badge');
+    const sc=statusColor(ns);
+    badge.textContent=statusLabel(ns);
+    badge.style.cssText=`width:auto;padding:0 10px;font-size:12px;border-radius:20px;background:${sc}22;color:${sc};border:1px solid ${sc}44;font-weight:600`;
+    if(ns==='배송중')document.getElementById('pod-sec').style.display='block';
+  }catch(e){hideLoading();showToast('error','실패: '+e.message);}
+}
+
+async function completeDelivery(){
+  if(!curDelivery)return;
+  const memo=document.getElementById('pod-memo').value.trim();
+  showLoading('배송 완료 처리 중...');
+  try{
+    const now=new Date().toISOString();
+    let photoUrl=null;
+    if(podPhoto){
+      try{
+        const blob=dataURLtoBlob(podPhoto);
+        const fn=`pod/${curDriver.name}/${Date.now()}.jpg`;
+        const ur=await fetch(`${SB_URL}/storage/v1/object/pod-photos/${fn}`,{
+          method:'POST',headers:{'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'image/jpeg'},body:blob});
+        if(ur.ok)photoUrl=`${SB_URL}/storage/v1/object/public/pod-photos/${fn}`;
+      }catch(e){console.warn('사진 업로드 실패',e);}
+    }
+    for(const id of curDelivery.ids)
+      await sb('PATCH',`orders?id=eq.${id}`,{status:'완료',completed_at:now,pod_memo:memo||null,pod_photo_url:photoUrl||null});
+    curDelivery.status='완료';curDelivery.orders.forEach(o=>o.status='완료');
+    const idx=deliveries.findIndex(d=>(d.stCode||d.name)===(curDelivery.stCode||curDelivery.name));
+    if(idx>=0)deliveries[idx].status='완료';
+    hideLoading();showToast('success','✅ 배송 완료!');
+    renderDetailActions('완료');
+    document.getElementById('pod-sec').style.display='none';
+    updateRouteSummary();
+    // 다음 배송지로 자동 이동
+    setTimeout(()=>{
+      const next=deliveries.find(d=>d.seq>(curDelivery.seq||0)&&!['완료','이슈'].includes(d.status));
+      if(next){showToast('info','➡️ 다음 배송지로 이동');setTimeout(()=>openDelivery(next.stCode||next.name),800);}
+      else{showToast('info','🎉 오늘 배송 완료!');setTimeout(()=>goBack(),1000);}
+    },1400);
+  }catch(e){hideLoading();showToast('error','실패: '+e.message);}
+}
+
+// ===== 이슈 =====
+function openIssue(){document.getElementById('issue-modal').classList.add('show');}
+function closeIssueModal(){
+  document.getElementById('issue-modal').classList.remove('show');
+  selIssueType='';
+  document.querySelectorAll('.iopt').forEach(e=>e.classList.remove('sel'));
+  document.getElementById('issue-memo').value='';
+}
+function selIssue(el,t){document.querySelectorAll('.iopt').forEach(e=>e.classList.remove('sel'));el.classList.add('sel');selIssueType=t;}
+async function submitIssue(){
+  if(!selIssueType){showToast('error','이슈 유형을 선택해주세요');return;}
+  const memo=document.getElementById('issue-memo').value.trim();
+  closeIssueModal();showLoading('이슈 등록 중...');
+  try{
+    const note=selIssueType+(memo?': '+memo:'');
+    for(const id of curDelivery.ids)await sb('PATCH',`orders?id=eq.${id}`,{status:'이슈',issue_note:note,issue_at:new Date().toISOString()});
+    curDelivery.status='이슈';curDelivery.orders.forEach(o=>o.status='이슈');
+    const idx=deliveries.findIndex(d=>(d.stCode||d.name)===(curDelivery.stCode||curDelivery.name));
+    if(idx>=0)deliveries[idx].status='이슈';
+    hideLoading();showToast('error','⚠️ 이슈 등록 완료');renderDetailActions('이슈');
+  }catch(e){hideLoading();showToast('error','실패: '+e.message);}
+}
+
+// ===== 사진 =====
+function onPhoto(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    podPhoto=e.target.result;
+    const pa=document.getElementById('pod-photo');
+    pa.innerHTML=`<img src="${podPhoto}">`;
+    pa.onclick=()=>{if(confirm('다시 찍으시겠습니까?')){resetPhoto();inp.value='';}};
+  };r.readAsDataURL(f);
+}
+function resetPhoto(){
+  podPhoto=null;
+  const pa=document.getElementById('pod-photo');
+  pa.innerHTML=`<div class="ph-icon">📷</div><div class="ph-txt">사진 촬영 (선택)</div>`;
+  pa.onclick=()=>document.getElementById('pod-file').click();
+}
+function dataURLtoBlob(du){const a=du.split(','),m=a[0].match(/:(.*?);/)[1],b=atob(a[1]);let n=b.length;const u=new Uint8Array(n);while(n--)u[n]=b.charCodeAt(n);return new Blob([u],{type:m});}
+
+// ===== 화면 전환 =====
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function goBack(){showScreen('screen-list');renderList();}
+
+// ===== 로딩/토스트 =====
+function showLoading(m){document.getElementById('lmsg').textContent=m;document.getElementById('loading').classList.add('show');}
+function hideLoading(){document.getElementById('loading').classList.remove('show');}
+function showToast(t,m){const w=document.getElementById('toast-wrap');const el=document.createElement('div');el.className=`toast toast-${t}`;el.textContent=m;w.appendChild(el);setTimeout(()=>el.remove(),2800);}
+
+
+</script>

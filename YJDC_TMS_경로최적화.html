@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YJDC TMS — 경로 최적화</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+:root{
+  --bg:#0f1117;--bg2:#181b24;--bg3:#1e2130;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.12);
+  --text:#e8eaf0;--text2:#8b90a0;--text3:#555a6e;
+  --accent:#4f8ef7;--green:#34d399;--amber:#fbbf24;--red:#f87171;--purple:#a78bfa;
+  --font:'IBM Plex Sans KR',sans-serif;--mono:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+
+html{overflow-y:auto}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;overflow-y:auto;overflow-x:hidden}
+
+/* 상단 topbar - sticky */
+.topbar{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 24px;height:52px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-title{font-size:14px;font-weight:600;color:var(--text)}
+.topbar-meta{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.topbar-right{display:flex;gap:10px;align-items:center}
+.date-chip{font-size:11px;font-family:var(--mono);background:rgba(79,142,247,0.1);color:var(--accent);border:1px solid rgba(79,142,247,0.25);border-radius:6px;padding:3px 10px}
+
+/* 버튼 */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;border:1px solid var(--border2);font-family:var(--font)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}.btn-primary:hover{opacity:0.9}
+.btn-success{background:rgba(52,211,153,0.2);color:var(--green);border-color:rgba(52,211,153,0.4)}.btn-success:hover{background:rgba(52,211,153,0.3)}
+.btn-ghost{background:transparent;color:var(--text2)}.btn-ghost:hover{background:rgba(255,255,255,0.05);color:var(--text)}
+.btn-amber{background:rgba(251,191,36,0.15);color:var(--amber);border-color:rgba(251,191,36,0.3)}
+.btn-sm{padding:5px 12px;font-size:11px}
+
+/* 컨텐츠 영역 */
+.content{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+
+/* 상단 요약바 */
+.summary-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.depot-badge{display:flex;align-items:center;gap:6px;background:rgba(79,142,247,0.1);border:1px solid rgba(79,142,247,0.25);border-radius:8px;padding:7px 14px;font-size:12px;color:var(--accent);font-weight:500}
+.stat-chip{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:12px;font-family:var(--mono);color:var(--text2)}
+.stat-chip b{color:var(--text)}
+
+/* 변경 알림바 */
+.changed-bar{display:none;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.2);border-radius:8px}
+.changed-bar.show{display:flex}
+
+/* 카드 그리드 - 3열, 전체 스크롤 */
+.driver-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;padding-bottom:60px}
+
+/* 카드 */
+.rc{background:var(--bg2);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column}
+.rc-head{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg3);border-radius:10px 10px 0 0}
+.rc-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.rc-name{font-size:14px;font-weight:600;color:var(--text)}
+.rc-cnt{font-size:11px;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1px 8px}
+.rc-stats{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.rc-stat{font-size:12px;font-family:var(--mono)}
+.rc-stat.km{color:var(--accent)}.rc-stat.time{color:var(--amber)}.rc-stat.cost{color:var(--green)}
+.rc-status-badge{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:500;white-space:nowrap}
+.status-rec{background:rgba(139,144,160,0.15);color:#8b90a0}
+.status-conf{background:rgba(52,211,153,0.15);color:var(--green);border:1px solid rgba(52,211,153,0.3)}
+
+/* 출발지 행 */
+.depot-row{display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--border);background:rgba(79,142,247,0.04)}
+.depot-icon{width:26px;height:26px;border-radius:50%;background:rgba(79,142,247,0.15);border:1px solid rgba(79,142,247,0.3);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.depot-label{font-size:12px;color:var(--accent);font-weight:500}
+.depot-tag{margin-left:auto;font-size:10px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:1px 6px}
+
+/* 경로 아이템 */
+.route-item{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid var(--border);cursor:grab;user-select:none;transition:background 0.1s}
+.route-item:last-of-type{border-bottom:none}
+.route-item:hover{background:rgba(255,255,255,0.02)}
+.route-item.dragging{opacity:0.4;background:rgba(79,142,247,0.08)}
+.route-item.drag-over{border-top:2px solid var(--accent)}
+.drag-handle{color:var(--text3);opacity:0.35;cursor:grab;flex-shrink:0;font-size:14px;line-height:1}
+.drag-handle:hover{opacity:0.8}
+.seq-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-family:var(--mono);flex-shrink:0;border:1px solid var(--border2);color:var(--text3);background:var(--bg3)}
+.route-stcode{font-size:10px;color:var(--text3);font-family:var(--mono);flex-shrink:0;min-width:62px}
+.route-name{flex:1;font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.route-dist{font-size:11px;font-family:var(--mono);flex-shrink:0;min-width:62px;text-align:right}
+.route-cum{font-size:10px;font-family:var(--mono);color:var(--text3);flex-shrink:0;min-width:52px;text-align:right}
+
+/* 카드 하단 */
+.rc-foot{display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--border);background:var(--bg3);border-radius:0 0 10px 10px;flex-wrap:wrap}
+.rc-foot-stat{font-size:11px;color:var(--text3);font-family:var(--mono)}.rc-foot-stat b{color:var(--text)}
+
+/* 빈 상태 */
+.empty-state{text-align:center;padding:64px 24px;color:var(--text3);grid-column:1/-1}
+.empty-state .icon{font-size:44px;margin-bottom:12px}
+.empty-state p{font-size:14px;color:var(--text2);margin-bottom:4px}
+
+/* 로딩 오버레이 */
+.loading-overlay{position:fixed;inset:0;background:rgba(15,17,23,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:500;gap:14px}
+.spinner{width:36px;height:36px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite}
+.loading-msg{font-size:13px;color:var(--text2);font-family:var(--mono)}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* 토스트 */
+.toast-wrap{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:1000}
+.toast{padding:12px 16px;border-radius:8px;font-size:13px;min-width:260px;animation:slideIn 0.2s;border:1px solid var(--border2)}
+.toast-success{background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.3);color:var(--green)}
+.toast-error{background:rgba(248,113,113,0.15);border-color:rgba(248,113,113,0.3);color:var(--red)}
+.toast-info{background:rgba(79,142,247,0.15);border-color:rgba(79,142,247,0.3);color:var(--accent)}
+.toast-warning{background:rgba(251,191,36,0.15);border-color:rgba(251,191,36,0.3);color:var(--amber)}
+@keyframes slideIn{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="topbar-title">🗺️ 경로 최적화</div>
+    <div class="topbar-meta">출발지: 영종아레나스 (37.4901, 126.4884)</div>
+  </div>
+  <div class="topbar-right">
+    <span class="date-chip" id="date-chip">—</span>
+    <button class="btn btn-ghost btn-sm" onclick="loadAndCalc()">↻ 다시 계산</button>
+    <button class="btn btn-success btn-sm" id="confirm-all-btn" onclick="confirmAllRoutes()" style="display:none">✓ 전체 경로 확정</button>
+  </div>
+</div>
+
+<div class="content">
+  <div class="summary-bar">
+    <div class="depot-badge">
+      <svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="10" r="3" stroke-width="2"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke-width="2"/></svg>
+      출발지 고정: 영종아레나스
+    </div>
+    <div class="stat-chip">배송지 <b id="s-st">—</b>곳</div>
+    <div class="stat-chip">총 거리 <b id="s-km">—</b>km</div>
+    <div class="stat-chip">기사 <b id="s-drv">—</b>명</div>
+    <div class="stat-chip">예상 주유비 <b id="s-fuel" style="color:var(--green)">—</b>원</div>
+  </div>
+
+  <div class="changed-bar" id="changed-bar">
+    <div style="font-size:13px;color:var(--green);display:flex;align-items:center;gap:8px">
+      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" stroke-width="2.5"/></svg>
+      순서 변경된 경로가 있습니다 — 저장해주세요
+    </div>
+    <button class="btn btn-success btn-sm" onclick="saveChangedRoutes()">변경 저장</button>
+  </div>
+
+  <div class="driver-grid" id="driver-grid">
+    <div class="empty-state">
+      <div class="icon">🗺️</div>
+      <p>경로 최적화 · 배송 순서 관리</p>
+      <div style="font-size:12px;margin-top:4px">위 [다시 계산] 버튼을 눌러 경로를 계산하세요</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const SB_URL='https://ctqozzdfesypfwtecgbm.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN0cW96emRmZXN5cGZ3dGVjZ2JtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMTI3NjQsImV4cCI6MjA5MTU4ODc2NH0.JW-uGdHsPivOejkhBIJNImKej4FRIE5FZVWz3Glln4o';
+const KAKAO_KEY='781a3c294cf521fb49a72736283d31d5';
+const DEPOT={lat:37.4901,lng:126.4884,name:'영종아레나스'};
+const DEFAULT_FUEL={efficiency:10.0,price:1650};
+const DRV_COLORS=['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c','#e879f9','#86efac','#93c5fd','#fde68a','#fca5a5','#c4b5fd','#6ee7b7','#fdba74','#f9a8d4','#67e8f9'];
+
+const sb=async(m,p,b,pref='return=minimal')=>{
+  const h={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'};
+  if(pref)h['Prefer']=pref;
+  const r=await fetch(`${SB_URL}/rest/v1/${p}`,{method:m,headers:h,body:b?JSON.stringify(b):undefined});
+  if(!r.ok)throw new Error(await r.text());
+  return r.status!==204?r.json():null;
+};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+function drvColor(name){
+  let h=0;for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))&0xffffffff;
+  return DRV_COLORS[Math.abs(h)%DRV_COLORS.length];
+}
+
+// 상태
+let routeData={};   // {driverName: {route, km, fuelCost, status}}
+let vehicleMap={};
+let delivDate='';
+let changedDrivers=new Set();
+let dragSrc={drv:null,idx:null};
+let loadingEl=null;
+
+// ===== 초기화 =====
+loadAndCalc();
+
+async function loadAndCalc(){
+  showLoading('오더 데이터 불러오는 중...');
+  try{
+    // 최신 날짜 조회
+    const dateRes=await sb('GET','orders?select=delivery_date&order=delivery_date.desc&limit=1');
+    if(!dateRes||!dateRes.length){hideLoading();showEmpty('배정된 오더가 없습니다');return;}
+    delivDate=dateRes[0].delivery_date;
+    document.getElementById('date-chip').textContent='📅 '+delivDate;
+
+    // 해당 날짜 오더 조회
+    const orders=await sb('GET',`orders?delivery_date=eq.${delivDate}&select=ship_to_code,ship_to_name,address,driver_name&order=ship_to_code&limit=2000`);
+    if(!orders||!orders.length){hideLoading();showEmpty('오더 데이터 없음');return;}
+
+    // 차량 정보
+    const veh=await sb('GET','driver_vehicles?select=*').catch(()=>[]);
+    vehicleMap={};(veh||[]).forEach(v=>vehicleMap[v.driver_name]=v);
+
+    // 기존 확정 경로
+    const existing=await sb('GET',`delivery_routes?delivery_date=eq.${delivDate}&select=*&order=driver_name,visit_order`).catch(()=>[]);
+    const existMap={};
+    (existing||[]).forEach(r=>{
+      if(!existMap[r.driver_name])existMap[r.driver_name]=[];
+      existMap[r.driver_name].push(r);
+    });
+
+    updateLoading('경로 계산 중...');
+    await buildRoutes(orders, existMap);
+    hideLoading();
+  }catch(e){hideLoading();showToast('error','로드 실패: '+e.message);console.error(e);}
+}
+
+async function buildRoutes(orders, existMap){
+  // ST코드 기준 그룹화
+  const stMap={};
+  orders.forEach(o=>{
+    const k=o.ship_to_code||o.ship_to_name;
+    if(!stMap[k])stMap[k]={stCode:o.ship_to_code||'',name:(o.ship_to_name||'').replace(/-725|-WB-725/g,'').trim(),address:o.address||'',drv:o.driver_name||''};
+  });
+
+  // 기사별 분류
+  const drvMap={};
+  Object.values(stMap).forEach(st=>{
+    if(!st.drv)return;
+    if(!drvMap[st.drv])drvMap[st.drv]=[];
+    drvMap[st.drv].push(st);
+  });
+
+  const drivers=Object.keys(drvMap).sort();
+  routeData={};
+  let totalST=0,totalKm=0,totalFuel=0;
+
+  for(const drv of drivers){
+    const stops=drvMap[drv];
+    totalST+=stops.length;
+
+    let orderedStops;
+    if(existMap[drv]&&existMap[drv].length){
+      // 기존 확정 경로 순서 복원
+      orderedStops=existMap[drv].sort((a,b)=>a.visit_order-b.visit_order).map(r=>({
+        stCode:r.ship_to_code,name:r.ship_to_name||'',address:r.address||'',
+        lat:r.lat,lng:r.lng,drv,existing:true
+      }));
+    } else {
+      // 좌표 변환 + 최적화
+      for(const st of stops){
+        const c=await geocode(st.address);
+        st.lat=c.lat;st.lng=c.lng;
+        await sleep(70);
+      }
+      orderedStops=nearestNeighbor(stops);
+    }
+
+    // 구간 거리 계산
+    let prev=DEPOT,cum=0;
+    const route=orderedStops.map((st,i)=>{
+      const d=haversine(prev.lat,prev.lng,st.lat||DEPOT.lat,st.lng||DEPOT.lng)*1.3;
+      cum+=d;
+      prev=st;
+      return{...st,visitOrder:i+1,distFromPrev:d,cumDist:cum};
+    });
+
+    const v=vehicleMap[drv]||DEFAULT_FUEL;
+    const eff=v.fuel_efficiency||v.efficiency||DEFAULT_FUEL.efficiency;
+    const price=v.fuel_price_per_liter||v.price||DEFAULT_FUEL.price;
+    const fuelCost=Math.round(cum/eff*price);
+    totalKm+=cum;totalFuel+=fuelCost;
+
+    routeData[drv]={route,km:cum,fuelCost,status:existMap[drv]?.length?'confirmed':'recommended'};
+    updateLoading(`경로 계산 중... ${Object.keys(routeData).length}/${drivers.length}명`);
+  }
+
+  document.getElementById('s-st').textContent=totalST;
+  document.getElementById('s-km').textContent=Math.round(totalKm);
+  document.getElementById('s-drv').textContent=drivers.length;
+  document.getElementById('s-fuel').textContent=totalFuel.toLocaleString();
+  if(drivers.length)document.getElementById('confirm-all-btn').style.display='inline-flex';
+  renderAllCards();
+}
+
+// ===== 카드 렌더 =====
+function renderAllCards(){
+  const grid=document.getElementById('driver-grid');
+  if(!Object.keys(routeData).length){showEmpty('경로 데이터 없음');return;}
+  grid.innerHTML='';
+  Object.keys(routeData).sort().forEach(drv=>grid.appendChild(makeCard(drv)));
+}
+
+function makeCard(drv){
+  const {route,km,fuelCost,status}=routeData[drv];
+  const color=drvColor(drv);
+  const v=vehicleMap[drv]||DEFAULT_FUEL;
+  const eff=v.fuel_efficiency||v.efficiency||DEFAULT_FUEL.efficiency;
+  const fuelL=(km/eff).toFixed(1);
+  const estTime=(km/30+route.length*0.15).toFixed(1);
+  const isConf=status==='confirmed';
+
+  const card=document.createElement('div');
+  card.className='rc';
+  card.id='rc-'+drv.replace(/\W/g,'_');
+
+  // 경로 아이템 HTML
+  const itemsHtml=route.map((st,i)=>`
+    <div class="route-item" draggable="true"
+      data-drv="${drv}" data-idx="${i}"
+      ondragstart="onDragStart(event,'${drv}',${i})"
+      ondragover="onDragOver(event)"
+      ondragleave="onDragLeave(event)"
+      ondrop="onDrop(event,'${drv}',${i})">
+      <span class="drag-handle">⠿</span>
+      <span class="seq-num" style="border-color:${color};color:${color}">${i+1}</span>
+      <span class="route-stcode">${st.stCode||''}</span>
+      <span class="route-name" title="${st.address}">${st.name||st.stCode||'—'}</span>
+      <span class="route-dist" style="color:${i===0?'var(--accent)':'var(--amber)'}">+${st.distFromPrev.toFixed(1)}km</span>
+      <span class="route-cum">${st.cumDist.toFixed(1)}km</span>
+    </div>`).join('');
+
+  card.innerHTML=`
+    <div class="rc-head">
+      <span class="rc-dot" style="background:${color}"></span>
+      <span class="rc-name">${drv}</span>
+      <span class="rc-cnt">${route.length}개소</span>
+      <div class="rc-stats">
+        <span class="rc-stat km">📍 ${Math.round(km)}km</span>
+        <span class="rc-stat time">⏱ ${estTime}h</span>
+        <span class="rc-stat cost">💳 ${fuelCost.toLocaleString()}원</span>
+        <span class="rc-status-badge ${isConf?'status-conf':'status-rec'}">${isConf?'확정':'추천'}</span>
+      </div>
+    </div>
+    <div class="depot-row">
+      <div class="depot-icon">🏭</div>
+      <span class="depot-label">영종아레나스</span>
+      <span class="depot-tag">기준점</span>
+    </div>
+    ${itemsHtml}
+    <div class="rc-foot">
+      <span class="rc-foot-stat">총 <b>${Math.round(km)}km</b></span>
+      <span class="rc-foot-stat" style="margin-left:10px">연료 <b>${fuelL}L</b> (${eff}km/L)</span>
+      <span class="rc-foot-stat" style="margin-left:10px">주유비 <b style="color:var(--green)">${fuelCost.toLocaleString()}원</b></span>
+      <div style="margin-left:auto;display:flex;gap:6px">
+        <button class="btn btn-ghost btn-sm" onclick="reOptimize('${drv}')">재최적화</button>
+        <button class="btn ${isConf?'btn-amber':'btn-success'} btn-sm" onclick="confirmRoute('${drv}')">
+          ${isConf?'재확정':'경로 확정'}
+        </button>
+      </div>
+    </div>`;
+  return card;
+}
+
+// ===== 드래그 앤 드롭 =====
+function onDragStart(e,drv,idx){
+  dragSrc={drv,idx};
+  e.dataTransfer.effectAllowed='move';
+  e.currentTarget.classList.add('dragging');
+}
+function onDragOver(e){
+  e.preventDefault();e.dataTransfer.dropEffect='move';
+  e.currentTarget.classList.add('drag-over');
+}
+function onDragLeave(e){e.currentTarget.classList.remove('drag-over');}
+function onDrop(e,drv,toIdx){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over');
+  if(dragSrc.drv!==drv||dragSrc.idx===toIdx)return;
+  const route=routeData[drv].route;
+  const moved=route.splice(dragSrc.idx,1)[0];
+  route.splice(toIdx,0,moved);
+  recalcDistances(drv);
+  changedDrivers.add(drv);
+  document.getElementById('changed-bar').classList.add('show');
+  refreshCard(drv);
+}
+
+function recalcDistances(drv){
+  const route=routeData[drv].route;
+  let prev=DEPOT,cum=0;
+  route.forEach((st,i)=>{
+    const d=haversine(prev.lat||DEPOT.lat,prev.lng||DEPOT.lng,st.lat||DEPOT.lat,st.lng||DEPOT.lng)*1.3;
+    st.distFromPrev=d;cum+=d;st.cumDist=cum;st.visitOrder=i+1;
+    prev=st;
+  });
+  routeData[drv].km=cum;
+  const v=vehicleMap[drv]||DEFAULT_FUEL;
+  const eff=v.fuel_efficiency||v.efficiency||DEFAULT_FUEL.efficiency;
+  const price=v.fuel_price_per_liter||v.price||DEFAULT_FUEL.price;
+  routeData[drv].fuelCost=Math.round(cum/eff*price);
+}
+
+function refreshCard(drv){
+  const old=document.getElementById('rc-'+drv.replace(/\W/g,'_'));
+  if(old)old.replaceWith(makeCard(drv));
+  updateSummary();
+}
+
+function updateSummary(){
+  let km=0,fuel=0,st=0;
+  Object.values(routeData).forEach(d=>{km+=d.km;fuel+=d.fuelCost;st+=d.route.length;});
+  document.getElementById('s-km').textContent=Math.round(km);
+  document.getElementById('s-fuel').textContent=fuel.toLocaleString();
+  document.getElementById('s-st').textContent=st;
+}
+
+function reOptimize(drv){
+  routeData[drv].route=nearestNeighbor([...routeData[drv].route]);
+  recalcDistances(drv);
+  routeData[drv].status='recommended';
+  changedDrivers.add(drv);
+  document.getElementById('changed-bar').classList.add('show');
+  refreshCard(drv);
+  showToast('info',`${drv} 경로 재최적화 완료`);
+}
+
+// ===== DB 저장 =====
+async function confirmRoute(drv){
+  showLoading('경로 확정 저장 중...');
+  try{
+    await sb('DELETE',`delivery_routes?delivery_date=eq.${delivDate}&driver_name=eq.${encodeURIComponent(drv)}`);
+    const rows=routeData[drv].route.map((st,i)=>({
+      delivery_date:delivDate,driver_name:drv,
+      ship_to_code:st.stCode||'',ship_to_name:st.name||'',address:st.address||'',
+      visit_order:i+1,lat:st.lat||null,lng:st.lng||null,
+      dist_from_prev_km:parseFloat(st.distFromPrev.toFixed(2)),
+      total_km_cumulative:parseFloat(st.cumDist.toFixed(2)),
+      route_type:'확정'
+    }));
+    await sb('POST','delivery_routes',rows,'resolution=ignore-duplicates,return=minimal');
+    routeData[drv].status='confirmed';
+    changedDrivers.delete(drv);
+    if(!changedDrivers.size)document.getElementById('changed-bar').classList.remove('show');
+    hideLoading();refreshCard(drv);
+    showToast('success',`✅ ${drv} 경로 확정 (${routeData[drv].route.length}개소)`);
+  }catch(e){hideLoading();showToast('error','저장 실패: '+e.message);}
+}
+
+async function confirmAllRoutes(){
+  const drvs=Object.keys(routeData);
+  showLoading(`전체 경로 확정 중... 0/${drvs.length}`);
+  try{
+    for(let i=0;i<drvs.length;i++){
+      updateLoading(`전체 경로 확정 중... ${i+1}/${drvs.length} (${drvs[i]})`);
+      await confirmRouteInternal(drvs[i]);
+    }
+    changedDrivers=new Set();
+    document.getElementById('changed-bar').classList.remove('show');
+    hideLoading();renderAllCards();
+    showToast('success',`✅ 전체 ${drvs.length}명 경로 확정 완료`);
+  }catch(e){hideLoading();showToast('error','실패: '+e.message);}
+}
+
+async function confirmRouteInternal(drv){
+  await sb('DELETE',`delivery_routes?delivery_date=eq.${delivDate}&driver_name=eq.${encodeURIComponent(drv)}`);
+  const rows=routeData[drv].route.map((st,i)=>({
+    delivery_date:delivDate,driver_name:drv,
+    ship_to_code:st.stCode||'',ship_to_name:st.name||'',address:st.address||'',
+    visit_order:i+1,lat:st.lat||null,lng:st.lng||null,
+    dist_from_prev_km:parseFloat(st.distFromPrev.toFixed(2)),
+    total_km_cumulative:parseFloat(st.cumDist.toFixed(2)),
+    route_type:'확정'
+  }));
+  await sb('POST','delivery_routes',rows,'resolution=ignore-duplicates,return=minimal');
+  routeData[drv].status='confirmed';
+}
+
+async function saveChangedRoutes(){
+  for(const drv of changedDrivers) await confirmRoute(drv);
+}
+
+// ===== 알고리즘 =====
+function nearestNeighbor(pts){
+  if(!pts.length)return[];
+  const unvisited=[...pts];const route=[];let cur={...DEPOT};
+  while(unvisited.length){
+    let bestI=0,bestD=Infinity;
+    unvisited.forEach((p,i)=>{
+      const d=haversine(cur.lat,cur.lng,p.lat||DEPOT.lat,p.lng||DEPOT.lng);
+      if(d<bestD){bestD=d;bestI=i;}
+    });
+    const next=unvisited.splice(bestI,1)[0];
+    route.push(next);
+    cur=next;
+  }
+  return route;
+}
+
+function haversine(lat1,lng1,lat2,lng2){
+  if(!lat1||!lng1||!lat2||!lng2)return 10;
+  const R=6371,rad=d=>d*Math.PI/180;
+  const dLat=rad(lat2-lat1),dLng=rad(lng2-lng1);
+  const a=Math.sin(dLat/2)**2+Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+async function geocode(addr){
+  const clean=addr.replace(/\s+\d{2,3}[-.\s]\d{3,4}[-.\s]\d{4}.*/,'').trim().substring(0,60);
+  try{
+    const r=await fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(clean)}`,
+      {headers:{'Authorization':`KakaoAK ${KAKAO_KEY}`}});
+    const d=await r.json();
+    if(d.documents?.length)return{lat:parseFloat(d.documents[0].y),lng:parseFloat(d.documents[0].x)};
+    const r2=await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(clean)}&size=1`,
+      {headers:{'Authorization':`KakaoAK ${KAKAO_KEY}`}});
+    const d2=await r2.json();
+    if(d2.documents?.length)return{lat:parseFloat(d2.documents[0].y),lng:parseFloat(d2.documents[0].x)};
+  }catch(e){}
+  return{lat:37.5665+(Math.random()-0.5)*0.4,lng:126.978+(Math.random()-0.5)*0.4};
+}
+
+// ===== UI 헬퍼 =====
+function showEmpty(msg){
+  document.getElementById('driver-grid').innerHTML=
+    `<div class="empty-state"><div class="icon">📭</div><p>${msg}</p></div>`;
+}
+function showLoading(msg){
+  if(loadingEl){const e=document.getElementById('ldmsg');if(e)e.textContent=msg;return;}
+  loadingEl=document.createElement('div');loadingEl.className='loading-overlay';
+  loadingEl.innerHTML=`<div class="spinner"></div><div class="loading-msg" id="ldmsg">${msg}</div>`;
+  document.body.appendChild(loadingEl);
+}
+function updateLoading(msg){const e=document.getElementById('ldmsg');if(e)e.textContent=msg;}
+function hideLoading(){if(loadingEl){loadingEl.remove();loadingEl=null;}}
+function showToast(type,msg){
+  const w=document.getElementById('toast-wrap');
+  const t=document.createElement('div');t.className=`toast toast-${type}`;t.textContent=msg;
+  w.appendChild(t);setTimeout(()=>t.remove(),3500);
+}
+</script>
+</body>
+</html>
