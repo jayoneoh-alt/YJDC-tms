@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/YJDC_TMS_관리자_v3.html" }
+  ]
+}
