@@ -263,6 +263,60 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
 .btn-assign:hover{background:rgba(52,211,153,0.28);border-color:rgba(52,211,153,0.6)}
 .btn-assign:active{transform:scale(0.96)}
 
+/* ===== 오더 카드형 UI ===== */
+.order-cards{display:flex;flex-direction:column;gap:8px}
+.order-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:10px;
+  overflow:hidden;transition:border-color 0.15s;position:relative
+}
+.order-card:hover{border-color:var(--border2)}
+.order-card.card-selected{border-color:rgba(52,211,153,0.5);background:rgba(52,211,153,0.03)}
+.order-card.card-changed{border-color:rgba(79,142,247,0.4);background:rgba(79,142,247,0.03)}
+
+/* 상태별 왼쪽 컬러 바 */
+.card-status-bar{position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:2px 0 0 2px}
+.csb-접수대기{background:#8b90a0}
+.csb-배차완료{background:#4f8ef7}
+.csb-픽업{background:#fbbf24}
+.csb-배송중{background:#a78bfa}
+.csb-완료{background:#34d399}
+.csb-이슈{background:#f87171}
+
+.card-body{padding:12px 14px 12px 18px;display:flex;align-items:flex-start;gap:12px}
+.card-check{flex-shrink:0;padding-top:2px}
+.card-main{flex:1;min-width:0}
+.card-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+.card-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+.card-st{font-family:var(--mono);font-size:11px;color:var(--text3);background:var(--bg3);padding:2px 7px;border-radius:4px;flex-shrink:0}
+.card-addr{font-size:11px;color:var(--text3);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:460px}
+.card-orders{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.card-order-chip{font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--bg3);padding:2px 7px;border-radius:3px}
+.card-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.card-meta-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)}
+.card-meta-label{color:var(--text3);font-size:10px}
+.card-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;min-width:180px}
+.card-status-badge{align-self:flex-end}
+.card-drv-row{display:flex;align-items:center;gap:6px;width:100%}
+.card-driver-select{
+  flex:1;padding:5px 8px;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:6px;color:var(--text);font-size:12px;font-family:var(--font);
+  cursor:pointer;outline:none;min-width:110px
+}
+.card-driver-select:focus{border-color:var(--accent)}
+.card-action-row{display:flex;gap:5px;align-items:center;justify-content:flex-end;width:100%}
+.card-drv-locked{
+  display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;
+  color:var(--text2);padding:5px 10px;background:var(--bg3);border-radius:6px;
+  border:1px solid var(--border)
+}
+.card-remark{font-size:10px;color:var(--text3);margin-top:4px;text-align:right}
+
+/* 뷰 토글 */
+.view-toggle{display:flex;gap:0;border:1px solid var(--border2);border-radius:6px;overflow:hidden;flex-shrink:0}
+.view-btn{padding:4px 10px;background:transparent;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:var(--font);transition:all 0.15s}
+.view-btn:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+.view-btn.active{background:var(--accent);color:#fff}
+
 /* 배차 흐름 강조 */
 .assign-flow-hint{
   display:flex;align-items:center;gap:8px;
@@ -677,7 +731,7 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
         <div class="upload-zone" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');handleDrop(event)" onclick="document.getElementById('file-input').click()">
           <div style="font-size:24px;margin-bottom:6px">📂</div>
           <div class="upload-title">출고 엑셀 파일 업로드</div>
-          <div class="upload-sub">드래그하거나 클릭 · <span>hanex + 반품리스트 자동 인식</span> · 중복 자동 방지</div>
+          <div class="upload-sub">드래그하거나 클릭 · <span>YJDC TMS + 반품리스트 자동 인식</span> · 중복 자동 방지</div>
         </div>
 
         <!-- 메트릭 카드 -->
@@ -807,6 +861,11 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
           <button class="filter-pill" onclick="filterStatus('이슈',this)" id="fp-이슈">이슈</button>
           <div class="toolbar-divider"></div>
           <input class="search-input" placeholder="ST코드 / 오더번호 / 업체명 검색..." oninput="searchOrders(this.value)">
+          <div class="toolbar-spacer"></div>
+          <div class="view-toggle">
+            <button class="view-btn active" id="vbtn-card" onclick="setView('card')">▦ 카드</button>
+            <button class="view-btn" id="vbtn-table" onclick="setView('table')">☰ 테이블</button>
+          </div>
         </div>
 
         <!-- 기사별 필터 -->
@@ -818,36 +877,52 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
           <div id="drv-pills" style="display:contents"></div>
         </div>
 
-        <!-- 테이블 -->
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="width:36px"><input type="checkbox" id="chk-all" onchange="toggleAllCheck(this)" title="전체 선택/해제"></th>
-                <th style="min-width:80px">ST 코드</th>
-                <th style="min-width:120px">오더번호</th>
-                <th style="min-width:150px">Ship To</th>
-                <th style="min-width:140px">주소</th>
-                <th style="text-align:center;width:48px">라인</th>
-                <th style="text-align:center;width:52px">수량</th>
-                <th style="min-width:90px">배송기사</th>
-                <th style="width:78px">상태</th>
-                <th style="min-width:108px">배차 지정</th>
-                <th style="min-width:120px">비고</th>
-                <th style="width:58px">액션</th>
-              </tr>
-            </thead>
-            <tbody id="order-tbody">
-              <tr><td colspan="12"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">엑셀 파일을 업로드하면 오더가 표시됩니다</div></div></td></tr>
-            </tbody>
-          </table>
-          <div class="pagination" id="pagination" style="display:none">
-            <div style="display:flex;align-items:center;gap:10px">
-              <span id="page-info" style="font-size:12px;color:var(--text3)"></span>
-              <button class="btn btn-ghost btn-sm" onclick="selectAllPages()" id="sel-all-pages" style="display:none">전체 페이지 모두 선택</button>
-            </div>
-            <div class="page-btns" id="page-btns"></div>
+        <!-- 카드 뷰 -->
+        <div id="order-card-view">
+          <div id="order-card-header" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <input type="checkbox" id="chk-all" onchange="toggleAllCheck(this)" title="전체 선택/해제" style="width:14px;height:14px;accent-color:var(--green);cursor:pointer">
+            <span style="font-size:11px;color:var(--text3)">전체 선택</span>
+            <span id="card-count-info" style="font-size:11px;color:var(--text3);margin-left:8px"></span>
           </div>
+          <div class="order-cards" id="order-cards">
+            <div class="empty" style="padding:48px 0"><div class="empty-icon">📋</div><div class="empty-title">엑셀 파일을 업로드하면 오더가 표시됩니다</div></div>
+          </div>
+        </div>
+
+        <!-- 테이블 뷰 (토글) -->
+        <div id="order-table-view" style="display:none">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:36px"><input type="checkbox" id="chk-all-tbl" onchange="toggleAllCheck(this)" title="전체 선택/해제"></th>
+                  <th style="min-width:80px">ST 코드</th>
+                  <th style="min-width:120px">오더번호</th>
+                  <th style="min-width:150px">Ship To</th>
+                  <th style="min-width:140px">주소</th>
+                  <th style="text-align:center;width:48px">라인</th>
+                  <th style="text-align:center;width:52px">수량</th>
+                  <th style="min-width:90px">배송기사</th>
+                  <th style="width:78px">상태</th>
+                  <th style="min-width:108px">배차 지정</th>
+                  <th style="min-width:120px">비고</th>
+                  <th style="width:58px">액션</th>
+                </tr>
+              </thead>
+              <tbody id="order-tbody">
+                <tr><td colspan="12"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">엑셀 파일을 업로드하면 오더가 표시됩니다</div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 페이지네이션 (공용) -->
+        <div class="pagination" id="pagination" style="display:none;margin-top:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span id="page-info" style="font-size:12px;color:var(--text3)"></span>
+            <button class="btn btn-ghost btn-sm" onclick="selectAllPages()" id="sel-all-pages" style="display:none">전체 페이지 모두 선택</button>
+          </div>
+          <div class="page-btns" id="page-btns"></div>
         </div>
       </div>
 
@@ -2181,7 +2256,15 @@ let driverColorMap={};
 const sb=async(method,path,body,prefer='return=minimal')=>{
   const headers={'apikey':SB_KEY,'Authorization':`Bearer ${SB_KEY}`,'Content-Type':'application/json'};
   if(prefer)headers['Prefer']=prefer;
-  const r=await fetch(`${SB_URL}/rest/v1/${path}`,{method,headers,body:body?JSON.stringify(body):undefined});
+  let r;
+  try{
+    r=await fetch(`${SB_URL}/rest/v1/${path}`,{method,headers,body:body?JSON.stringify(body):undefined});
+  }catch(e){
+    // 네트워크 단에서 실패 (CORS, 오프라인, file:// 프로토콜 등)
+    const isFile=location.protocol==='file:';
+    if(isFile) throw new Error('로컬 파일(file://)로 열면 Supabase 연결이 차단됩니다.\n→ Vercel 배포 URL이나 로컬 서버(http://)로 열어주세요.');
+    throw new Error('Supabase 연결 실패: '+e.message+'\n→ 인터넷 연결 및 Supabase 프로젝트 활성화 여부를 확인해주세요.');
+  }
   if(!r.ok)throw new Error(await r.text());
   return r.status!==204?r.json():null;
 };
@@ -2457,7 +2540,8 @@ function processFile(file){
   reader.onload=async e=>{
     try{
       const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-      const hs=wb.Sheets['hanex']||wb.Sheets[wb.SheetNames[0]];
+      // 시트명: 'YJDC TMS' 우선, 없으면 첫 번째 시트
+      const hs=wb.Sheets['YJDC TMS']||wb.Sheets['hanex']||wb.Sheets[wb.SheetNames[0]];
       const hd=XLSX.utils.sheet_to_json(hs,{defval:''});
       const rs=wb.Sheets['반품리스트'];
       const rd=rs?XLSX.utils.sheet_to_json(rs,{defval:''}):[];
@@ -2474,20 +2558,42 @@ function processFile(file){
 
 async function uploadOrders(rows,filename){
   const dm=filename.match(/(\d{4}-\d{2}-\d{2})/);
-  const dd=dm?dm[1]:new Date().toISOString().split('T')[0];
+  let dd=dm?dm[1]:null;
+  // 파일명에 날짜 없으면 첫 행의 출고일자 컬럼에서 추출 시도
+  if(!dd&&rows.length){
+    const rv=rows[0]['출고일자'];
+    if(rv instanceof Date){
+      dd=rv.toISOString().split('T')[0];
+    }else if(typeof rv==='number'&&rv>40000){
+      // 엑셀 serial date → JS Date
+      const d=new Date(Math.round((rv-25569)*86400*1000));
+      dd=d.toISOString().split('T')[0];
+    }else if(typeof rv==='string'&&rv.match(/\d{4}-\d{2}-\d{2}/)){
+      dd=rv.match(/(\d{4}-\d{2}-\d{2})/)[1];
+    }
+  }
+  if(!dd)dd=new Date().toISOString().split('T')[0];
   const om={};
   rows.forEach(row=>{
     const on=String(row['Order Number']||'').trim();
-    const ln=parseFloat(row['Line']||1);
+    const lnRaw=String(row['Line']||'1').trim();
+    const ln=parseFloat(lnRaw)||1;
+    // 소수점 라인번호를 문자열 키로 안정적으로 처리 (e.g. 2.01, 1.001)
+    const lnKey=lnRaw||String(ln);
     if(!on)return;
-    const k=`${on}_${ln}`;
+    const k=`${on}_${lnKey}`;
     if(!om[k])om[k]={delivery_date:dd,order_number:on,line_number:ln,sku:String(row['SKU']||'').trim(),lot:String(row['Lot']||'').trim(),qty:parseInt(row["Q'ty"]||0),sold_to_name:String(row['Sold To Name']||'').trim(),customer_po:String(row['Customer PO']||'').trim(),ship_to_code:String(row['Ship To']||'').trim(),ship_to_name:String(row['Ship To Description']||'').trim(),address:String(row['주소']||'').trim(),remarks:String(row['Remark']||'').trim(),requests:String(row['요청사항']||'').trim(),driver_name:String(row['배송기사']||'').trim(),mode:String(row['MODE']||'YJDC').trim(),status:'접수대기'};
   });
   const orders=Object.values(om);
   const existing=await sb('GET',`orders?delivery_date=eq.${dd}&select=order_number,line_number`);
   const existKeys=new Set((existing||[]).map(o=>`${o.order_number}_${o.line_number}`));
   let skipped=0;
-  const newOrders=orders.filter(o=>{const k=`${o.order_number}_${o.line_number}`;if(existKeys.has(k)){skipped++;return false;}return true;});
+  const newOrders=orders.filter(o=>{
+    // float 키도 exact match 되도록 두 가지 형태 모두 확인
+    const k1=`${o.order_number}_${o.line_number}`;
+    const k2=`${o.order_number}_${String(o.line_number)}`;
+    if(existKeys.has(k1)||existKeys.has(k2)){skipped++;return false;}return true;
+  });
   for(let i=0;i<newOrders.length;i+=100)await sb('POST','orders',newOrders.slice(i,i+100),'resolution=ignore-duplicates,return=minimal');
   const stm={};rows.forEach(row=>{const c=String(row['Ship To']||'').trim();if(c&&!stm[c])stm[c]={ship_to_code:c,ship_to_name:String(row['Ship To Description']||'').trim(),address:String(row['주소']||'').trim()};});
   const sts=Object.values(stm);
@@ -2666,65 +2772,194 @@ function updateDriverPillCounts(){
   });
 }
 
-// ==================== 테이블 렌더 ====================
+// ==================== 뷰 토글 ====================
+let currentView='card';
+function setView(v){
+  currentView=v;
+  document.getElementById('order-card-view').style.display=v==='card'?'block':'none';
+  document.getElementById('order-table-view').style.display=v==='table'?'block':'none';
+  const bc=document.getElementById('vbtn-card'), bt=document.getElementById('vbtn-table');
+  if(bc){bc.classList.toggle('active',v==='card');}
+  if(bt){bt.classList.toggle('active',v==='table');}
+  applyFilter();
+}
+
+// ==================== 공통 헬퍼 ====================
+function buildGroupRemark(g){
+  const stInfo=shipToMap[g.ship_to_code]||{};
+  const isRet=g.orderNumbers.some(on=>returnOrderSet.has(on));
+  let rParts=[];
+  if(isRet) rParts.push('<span style="background:rgba(248,113,113,0.15);color:#f87171;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:500">🔄 반품</span>');
+  if(stInfo.notes&&stInfo.notes.trim()) rParts.push(`<span style="color:var(--amber);font-size:10px" title="${stInfo.notes}">⚠️ ${stInfo.notes.substring(0,20)}${stInfo.notes.length>20?'…':''}</span>`);
+  if(stInfo.available_time) rParts.push(`<span style="color:var(--text3);font-size:10px">⏰${stInfo.available_time}</span>`);
+  return rParts.join(' ');
+}
+
+function updateHeaderCheckbox(selectableGroups,id){
+  const chkAll=document.getElementById(id);
+  if(!chkAll) return;
+  if(!selectableGroups.length){chkAll.checked=false;chkAll.indeterminate=false;return;}
+  const ac=selectableGroups.every(g=>g.ids.every(i=>selectedIds.has(i)));
+  const sc=selectableGroups.some(g=>g.ids.some(i=>selectedIds.has(i)));
+  chkAll.checked=ac; chkAll.indeterminate=!ac&&sc;
+}
+
+function renderPagination(total){
+  const start=(curPage-1)*PAGE_SIZE;
+  const totalPages=Math.ceil(total/PAGE_SIZE);
+  document.getElementById('pagination').style.display='flex';
+  document.getElementById('page-info').textContent=`${start+1}–${Math.min(start+PAGE_SIZE,total)} / 총 ${total}개 배송지`;
+  document.getElementById('page-btns').innerHTML=Array.from({length:Math.min(totalPages,10)},(_,i)=>
+    `<button class="page-btn ${i+1===curPage?'active':''}" onclick="goPage(${i+1})">${i+1}</button>`).join('');
+  const selAllBtn=document.getElementById('sel-all-pages');
+  if(selAllBtn) selAllBtn.style.display=totalPages>1&&selectedIds.size>0?'inline-flex':'none';
+}
+
+// ==================== 렌더 진입점 ====================
 function renderGroups(groups){
+  if(currentView==='table') renderGroupsTable(groups);
+  else renderGroupsCard(groups);
+}
+
+// ==================== 카드 렌더 ====================
+function renderGroupsCard(groups){
+  const container=document.getElementById('order-cards');
+  const countInfo=document.getElementById('card-count-info');
+  const canSel=s=>['접수대기','배차완료'].includes(s);
+  const isLocked=s=>['픽업','배송중','완료'].includes(s);
+
+  if(!groups.length){
+    container.innerHTML=`<div class="empty" style="padding:48px 0"><div class="empty-icon">📋</div><div class="empty-title">${allOrders.length?'해당 조건의 오더가 없습니다':'엑셀 파일을 업로드해주세요'}</div></div>`;
+    document.getElementById('pagination').style.display='none';
+    if(countInfo) countInfo.textContent='';
+    updateHeaderCheckbox([],'chk-all');
+    return;
+  }
+
+  const total=groups.length, start=(curPage-1)*PAGE_SIZE;
+  const pageData=groups.slice(start,start+PAGE_SIZE);
+
+  container.innerHTML=pageData.map(g=>{
+    const locked=isLocked(g.status);
+    const selectable=canSel(g.status);
+    const allChecked=g.ids.every(id=>selectedIds.has(id));
+    const pendingDrv=g.pendingDriver;
+    const curDrv=pendingDrv||g.driver_name||'';
+    const drvColor=driverColorMap[curDrv]||'#888';
+    const isConfirmed=g.status==='배차완료';
+    const safeKey=g.key.replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    const drvOpts=driversList.map(d=>`<option value="${d.name}" ${d.name===curDrv?'selected':''}>${d.name}</option>`).join('');
+    const idsAttr=JSON.stringify(g.ids).replace(/"/g,'&quot;');
+    const remarkHtml=buildGroupRemark(g);
+
+    // 오더번호 칩
+    const ons=g.orderNumbers;
+    const orderChips=ons.slice(0,4).map(on=>`<span class="card-order-chip">${on}</span>`).join('')
+      +(ons.length>4?`<span class="card-order-chip" style="color:var(--accent)">+${ons.length-4}</span>`:'');
+
+    // 배차 영역
+    let drvArea='';
+    if(selectable){
+      drvArea=`<div style="display:flex;align-items:center;gap:6px;width:100%">
+        <select class="card-driver-select"
+          onchange="onGroupDriverChange('${safeKey}',this.value,'${(g.driver_name||'').replace(/'/g,"\\'")}')">
+          <option value="">기사 선택</option>${drvOpts}
+        </select>
+        ${curDrv?`<button class="btn-assign" onclick="quickConfirm('${safeKey}')">${isConfirmed?'재확정':'확정'}</button>`:''}
+      </div>
+      ${isConfirmed?`<div style="margin-top:4px;display:flex;justify-content:flex-end">
+        <button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="requireAdminForUnlockGroup('${safeKey}')">배차해제</button>
+      </div>`:''}`;
+    }else if(locked){
+      const lockColor=g.status==='픽업'?'var(--amber)':g.status==='배송중'?'#a78bfa':g.status==='완료'?'var(--green)':'var(--text3)';
+      drvArea=`<div class="card-drv-locked" style="color:${lockColor}">
+        🔒 <span>${curDrv||'—'}</span>
+      </div>`;
+    }
+
+    const cardCls=`order-card${allChecked?' card-selected':''}${pendingDrv?' card-changed':''}`;
+    return`<div class="${cardCls}">
+      <div class="card-status-bar csb-${g.status}"></div>
+      <div class="card-body">
+        <div class="card-check">
+          <input type="checkbox" class="grp-chk" ${allChecked?'checked':''} ${selectable?'':'disabled'}
+            data-key="${g.key.replace(/"/g,'&quot;')}" data-status="${g.status}" data-ids="${idsAttr}"
+            style="width:15px;height:15px;accent-color:var(--green);cursor:${selectable?'pointer':'default'};${selectable?'':'opacity:0.25'}">
+        </div>
+        <div class="card-main">
+          <div class="card-top">
+            <span class="card-name">${(g.ship_to_name||'').replace(/-725|-WB-725/g,'')}</span>
+            <span class="card-st">${g.ship_to_code||'—'}</span>
+            <span class="badge badge-${g.status}" style="margin-left:auto;flex-shrink:0">${g.status}</span>
+          </div>
+          <div class="card-addr" title="${g.address}">${g.address||'주소 없음'}</div>
+          <div class="card-orders">${orderChips||'<span class="card-order-chip">오더없음</span>'}</div>
+          <div class="card-meta">
+            <span class="card-meta-item"><span class="card-meta-label">라인</span>&nbsp;<b style="font-family:var(--mono);color:var(--text)">${g.totalLines}</b></span>
+            <span style="color:var(--border2)">│</span>
+            <span class="card-meta-item"><span class="card-meta-label">수량</span>&nbsp;<b style="font-family:var(--mono);color:var(--text)">${g.totalQty}</b></span>
+            ${!selectable&&curDrv?`<span style="color:var(--border2)">│</span>
+            <span class="card-meta-item"><span style="background:${drvColor};width:7px;height:7px;border-radius:50%;display:inline-block"></span>&nbsp;<b style="color:var(--text)">${curDrv}</b></span>`:''}
+            ${remarkHtml?`<span style="color:var(--border2)">│</span><span>${remarkHtml}</span>`:''}
+          </div>
+        </div>
+        <div class="card-right">
+          ${drvArea}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  renderPagination(total);
+  if(countInfo) countInfo.textContent=`${total}개 배송지`;
+  updateHeaderCheckbox(pageData.filter(g=>canSel(g.status)),'chk-all');
+}
+
+// ==================== 테이블 렌더 ====================
+function renderGroupsTable(groups){
   const tbody=document.getElementById('order-tbody');
+  const canSel=s=>['접수대기','배차완료'].includes(s);
+  const isLocked=s=>['픽업','배송중','완료'].includes(s);
+
   if(!groups.length){
     tbody.innerHTML=`<tr><td colspan="12"><div class="empty"><div class="empty-icon">📋</div><div class="empty-title">${allOrders.length?'해당 조건의 오더가 없습니다':'엑셀 파일을 업로드해주세요'}</div></div></td></tr>`;
     document.getElementById('pagination').style.display='none';
     return;
   }
+
   const total=groups.length, start=(curPage-1)*PAGE_SIZE;
   const pageData=groups.slice(start,start+PAGE_SIZE);
-  const isLocked=s=>['픽업','배송중','완료'].includes(s);
-  const canSel=s=>['접수대기','배차완료'].includes(s);
 
   tbody.innerHTML=pageData.map(g=>{
     const locked=isLocked(g.status);
     const selectable=canSel(g.status);
-    // 그룹 내 모든 id 선택 여부
     const allChecked=g.ids.every(id=>selectedIds.has(id));
-    const someChecked=g.ids.some(id=>selectedIds.has(id));
     const pendingDrv=g.pendingDriver;
     const curDrv=pendingDrv||g.driver_name||'';
     const drvColor=driverColorMap[curDrv]||'#888';
-
-    // 오더번호 표시 (최대 3개 + +N건)
-    const ons=g.orderNumbers;
-    const orderHtml=ons.length<=3
-      ? ons.map(on=>`<div class="td-mono" style="font-size:11px">${on}</div>`).join('')
-      : ons.slice(0,3).map(on=>`<div class="td-mono" style="font-size:11px">${on}</div>`).join('')
-        +`<div style="font-size:10px;color:var(--text3)">+${ons.length-3}건</div>`;
-
-    // 배차지정 셀 - 단계별 버튼 흐름
+    const isConfirmed=g.status==='배차완료';
+    const safeKey=g.key.replace(/'/g,"\\'");
     const drvOpts=driversList.map(d=>`<option value="${d.name}" ${d.name===curDrv?'selected':''}>${d.name}</option>`).join('');
-    let assignCell='', actionCell='';
-    const hasPending=!!pendingDriverChanges[g.ids[0]];
-    const hasDrv=!!(curDrv);
+    const idsAttr=JSON.stringify(g.ids).replace(/"/g,'&quot;');
+    const ons=g.orderNumbers;
+    const orderHtml=ons.slice(0,3).map(on=>`<div class="td-mono" style="font-size:11px">${on}</div>`).join('')
+      +(ons.length>3?`<div style="font-size:10px;color:var(--text3)">+${ons.length-3}건</div>`:'');
 
-    if(['접수대기','배차완료'].includes(g.status)){
-      // 접수대기 / 배차완료: 기사 드롭다운 + 확정 버튼
-      const isConfirmed = g.status==='배차완료';
-      assignCell=`
-        <div style="display:flex;align-items:center;gap:6px">
-          <select class="driver-select" style="flex:1;min-width:80px"
-            onchange="onGroupDriverChange('${g.key}',this.value,'${g.driver_name}')">
-            <option value="">기사 선택</option>${drvOpts}
-          </select>
-          ${hasDrv?`<button class="btn-assign" onclick="quickConfirm('${g.key}')">${isConfirmed?'재확정':'확정'}</button>`:''}
-        </div>`;
-      if(isConfirmed){
-        actionCell=`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="requireAdminForUnlockGroup('${g.key}')">해제</button>`;
-      }
-    }else if(locked){
-      // 픽업 이후: 잠금 표시
-      const lockColor = g.status==='픽업'?'var(--amber)':g.status==='배송중'?'#a78bfa':g.status==='완료'?'var(--green)':'var(--text3)';
-      assignCell=`<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:${lockColor}">
-        🔒 ${curDrv||'—'}
+    let assignCell='', actionCell='';
+    if(selectable){
+      assignCell=`<div style="display:flex;align-items:center;gap:6px">
+        <select class="driver-select" style="flex:1;min-width:80px"
+          onchange="onGroupDriverChange('${safeKey}',this.value,'${(g.driver_name||'').replace(/'/g,"\\'")}')">
+          <option value="">기사 선택</option>${drvOpts}
+        </select>
+        ${curDrv?`<button class="btn-assign" onclick="quickConfirm('${safeKey}')">${isConfirmed?'재확정':'확정'}</button>`:''}
       </div>`;
+      if(isConfirmed) actionCell=`<button class="btn btn-ghost btn-sm" style="font-size:10px;padding:3px 8px" onclick="requireAdminForUnlockGroup('${safeKey}')">해제</button>`;
+    }else if(locked){
+      const lockColor=g.status==='픽업'?'var(--amber)':g.status==='배송중'?'#a78bfa':g.status==='완료'?'var(--green)':'var(--text3)';
+      assignCell=`<div style="font-size:11px;color:${lockColor}">🔒 ${curDrv||'—'}</div>`;
     }
 
-    // 비고 (반품 + 업체특이사항)
     const stInfo=shipToMap[g.ship_to_code]||{};
     const isRet=g.orderNumbers.some(on=>returnOrderSet.has(on));
     let rParts=[];
@@ -2735,7 +2970,7 @@ function renderGroups(groups){
 
     const rowCls=(allChecked?'row-selected':'')+(pendingDrv?' row-changed':'');
     return`<tr class="${rowCls}">
-      <td><input type="checkbox" class="grp-chk" ${allChecked?'checked':''} ${selectable?'':'disabled style="opacity:0.2"'} data-key="${g.key.replace(/"/g,'&quot;')}" data-status="${g.status}" data-ids="${JSON.stringify(g.ids).replace(/"/g,'&quot;')}"></td>
+      <td><input type="checkbox" class="grp-chk" ${allChecked?'checked':''} ${selectable?'':'disabled style="opacity:0.2"'} data-key="${g.key.replace(/"/g,'&quot;')}" data-status="${g.status}" data-ids="${idsAttr}"></td>
       <td><div style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text)">${g.ship_to_code||'—'}</div></td>
       <td><div class="order-list">${orderHtml}</div></td>
       <td class="td-main" title="${g.ship_to_name}">${(g.ship_to_name||'').replace(/-725|-WB-725/g,'').substring(0,20)}</td>
@@ -2750,23 +2985,8 @@ function renderGroups(groups){
     </tr>`;
   }).join('');
 
-  const totalPages=Math.ceil(total/PAGE_SIZE);
-  document.getElementById('pagination').style.display='flex';
-  document.getElementById('page-info').textContent=`${start+1}–${Math.min(start+PAGE_SIZE,total)} / 총 ${total}개 배송지`;
-  document.getElementById('page-btns').innerHTML=Array.from({length:Math.min(totalPages,10)},(_,i)=>
-    `<button class="page-btn ${i+1===curPage?'active':''}" onclick="goPage(${i+1})">${i+1}</button>`).join('');
-  const selAllBtn=document.getElementById('sel-all-pages');
-  if(selAllBtn)selAllBtn.style.display=totalPages>1&&selectedIds.size>0?'inline-flex':'none';
-
-  // 헤더 체크박스
-  const chkAll=document.getElementById('chk-all');
-  const pageSel=pageData.filter(g=>canSel(g.status));
-  if(chkAll&&pageSel.length){
-    const ac=pageSel.every(g=>g.ids.every(id=>selectedIds.has(id)));
-    const sc=pageSel.some(g=>g.ids.some(id=>selectedIds.has(id)));
-    chkAll.checked=ac;
-    chkAll.indeterminate=!ac&&sc;
-  }
+  renderPagination(total);
+  updateHeaderCheckbox(pageData.filter(g=>canSel(g.status)),'chk-all-tbl');
 }
 
 // renderOrders alias (하위 호환)
@@ -2797,25 +3017,11 @@ function toggleAllCheck(chk){
   const pageGroups=groups.slice((curPage-1)*PAGE_SIZE, curPage*PAGE_SIZE);
   pageGroups.forEach(g=>{
     if(['접수대기','배차완료'].includes(g.status)){
-      g.ids.forEach(id=>{
-        if(chk.checked) selectedIds.add(id);
-        else selectedIds.delete(id);
-      });
+      g.ids.forEach(id=>{ if(chk.checked) selectedIds.add(id); else selectedIds.delete(id); });
     }
   });
   updateSelBar();
-  // 개별 체크박스 DOM 업데이트
-  document.querySelectorAll('#order-tbody input.grp-chk').forEach(el=>{
-    const idsRaw = el.getAttribute('data-ids');
-    if(!idsRaw) return;
-    try{
-      const ids = JSON.parse(idsRaw.replace(/&quot;/g,'"'));
-      const allC = ids.every(id=>selectedIds.has(id));
-      const someC = ids.some(id=>selectedIds.has(id));
-      el.checked = allC;
-      el.indeterminate = !allC && someC;
-    }catch(e){}
-  });
+  syncCheckboxDOM();
 }
 
 function selectAllPages(){
@@ -2823,17 +3029,24 @@ function selectAllPages(){
     if(['접수대기','배차완료'].includes(o.status)) selectedIds.add(o.id);
   });
   updateSelBar();
-  document.querySelectorAll('#order-tbody input.grp-chk').forEach(el=>{
-    const idsRaw=el.getAttribute('data-ids');
-    if(!idsRaw)return;
-    try{
-      const ids=JSON.parse(idsRaw.replace(/&quot;/g,'"'));
-      el.checked=ids.every(id=>selectedIds.has(id));
-      el.indeterminate=false;
-    }catch(e){}
-  });
+  syncCheckboxDOM();
   const grpCount=buildSTGroups(filteredOrders).filter(g=>['접수대기','배차완료'].includes(g.status)).length;
   showToast('info',`전체 ${grpCount}개 배송지 선택됨`);
+}
+
+// 현재 뷰의 모든 grp-chk 체크박스 상태를 selectedIds에 맞게 갱신
+function syncCheckboxDOM(){
+  document.querySelectorAll('input.grp-chk').forEach(el=>{
+    const idsRaw=el.getAttribute('data-ids');
+    if(!idsRaw) return;
+    try{
+      const ids=JSON.parse(idsRaw.replace(/&quot;/g,'"'));
+      const allC=ids.every(id=>selectedIds.has(id));
+      const someC=ids.some(id=>selectedIds.has(id));
+      el.checked=allC;
+      el.indeterminate=!allC&&someC;
+    }catch(e){}
+  });
 }
 
 function clearSelection(){
