@@ -381,7 +381,7 @@ tr.row-changed td{background:rgba(251,191,36,0.05)}
 .spinner{width:34px;height:34px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
-<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=781a3c294cf521fb49a72736283d31d5&libraries=services,clusterer&autoload=false"></script>
+<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=781a3c294cf521fb49a72736283d31d5&libraries=services,clusterer"></script>
 </head>
 <body>
 <div class="layout">
@@ -1467,26 +1467,18 @@ function drawPieChart(regionData){
 }
 
 // ===== 카카오 지도 =====
-function loadKakaoSDK(){
-  return new Promise((resolve,reject)=>{
-    if(typeof kakao!=='undefined'&&kakao.maps){resolve();return;}
-    // autoload=false → kakao.maps.load() 호출 필요
-    if(typeof kakao!=='undefined'){
-      kakao.maps.load(()=>resolve());
-      return;
-    }
-    reject(new Error('kakao SDK not loaded'));
-  });
-}
-
 async function initRegionMap(stList){
   const loadingEl=document.getElementById('region-map-loading');
   if(loadingEl) loadingEl.style.display='flex';
 
-  try{
-    await loadKakaoSDK();
-  }catch(e){
-    if(loadingEl) loadingEl.innerHTML='<span style="font-size:12px;color:var(--text3)">⚠️ 카카오 지도 로드 실패 — 페이지를 새로고침해주세요</span>';
+  // 카카오 SDK 로드 대기 (최대 5초)
+  let waited=0;
+  while((typeof kakao==='undefined'||!kakao.maps)&&waited<50){
+    await new Promise(r=>setTimeout(r,100));
+    waited++;
+  }
+  if(typeof kakao==='undefined'||!kakao.maps){
+    if(loadingEl) loadingEl.innerHTML='<span style="font-size:12px;color:var(--amber)">⚠️ 카카오 지도 로드 실패 — 페이지를 새로고침해주세요</span>';
     return;
   }
 
