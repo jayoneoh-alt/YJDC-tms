@@ -1507,29 +1507,23 @@ async function initRegionMap(stList){
 
   // 좌표 있는 배송지 지오코딩 (상위 30개만)
   const geocoder=new kakao.maps.services.Geocoder();
-  const top30=stList.slice(0,30);
-  const maxCount=top30[0]?.count||1;
-
-  const PIE_COLORS=['#4f8ef7','#34d399','#fbbf24','#f87171','#a78bfa','#2dd4bf','#fb923c','#e879f9'];
-
+  const top20=stList.slice(0,20); // 상위 20개만 (속도 개선)
+  const maxCount=top20[0]?.count||1;
   let processed=0;
   const bounds=new kakao.maps.LatLngBounds();
 
-  for(const st of top30){
-    if(!st.address)continue;
-    await new Promise(resolve=>{
+  function geocodeOne(st){
+    return new Promise(resolve=>{
+      if(!st.address){resolve();return;}
       const clean=st.address.replace(/\(.*?\)/g,'').trim().substring(0,50);
+      const timer=setTimeout(resolve,3000); // 3초 타임아웃
       geocoder.addressSearch(clean,(res,status)=>{
+        clearTimeout(timer);
         if(status===kakao.maps.services.Status.OK&&res.length){
           const lat=parseFloat(res[0].y), lng=parseFloat(res[0].x);
-          st.lat=lat; st.lng=lng;
-
-          // 마커 크기 = 배송 빈도
-          const sz=Math.max(20, Math.min(50, Math.round(20+st.count/maxCount*30)));
+          const sz=Math.max(20,Math.min(50,Math.round(20+st.count/maxCount*30)));
           const mainDrv=Object.entries(st.drivers).sort((a,b)=>b[1]-a[1])[0];
           const color=mainDrv?drvColor(mainDrv[0]):'#4f8ef7';
-
-          // 커스텀 마커 (원형)
           const markerImg=new kakao.maps.MarkerImage(
             `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
               `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}" height="${sz}">
@@ -1540,26 +1534,14 @@ async function initRegionMap(stList){
             new kakao.maps.Size(sz,sz),
             {offset:new kakao.maps.Point(sz/2,sz/2)}
           );
-
-          const marker=new kakao.maps.Marker({
-            position:new kakao.maps.LatLng(lat,lng),
-            map:regionMap,
-            image:markerImg,
-            title:st.name
-          });
-
-          // 인포윈도우
+          const marker=new kakao.maps.Marker({position:new kakao.maps.LatLng(lat,lng),map:regionMap,image:markerImg,title:st.name});
           const iw=new kakao.maps.InfoWindow({
             content:`<div style="padding:8px 12px;font-size:12px;min-width:140px;font-family:sans-serif">
-              <b>${st.name}</b><br>
-              <span style="color:#888">ST: ${st.stCode||'—'}</span><br>
-              배송 <b>${st.count}회</b> · 수량 ${st.qty}<br>
-              ${mainDrv?`담당: <b>${mainDrv[0]}</b>`:''}
-            </div>`,
-            removable:true
+              <b>${st.name}</b><br><span style="color:#888">ST: ${st.stCode||'—'}</span><br>
+              배송 <b>${st.count}회</b> · 수량 ${st.qty}<br>${mainDrv?`담당: <b>${mainDrv[0]}</b>`:''}
+            </div>`,removable:true
           });
           kakao.maps.event.addListener(marker,'click',()=>iw.open(regionMap,marker));
-
           regionMarkers.push(marker);
           bounds.extend(new kakao.maps.LatLng(lat,lng));
           processed++;
@@ -1567,7 +1549,12 @@ async function initRegionMap(stList){
         resolve();
       });
     });
-    await new Promise(r=>setTimeout(r,60));
+  }
+
+  // 5개씩 병렬 처리
+  const BATCH=5;
+  for(let i=0;i<top20.length;i+=BATCH){
+    await Promise.all(top20.slice(i,i+BATCH).map(geocodeOne));
   }
 
   if(processed>0) regionMap.setBounds(bounds);
